@@ -1,0 +1,8 @@
+(String result) findName(list) {
+    for (name in list) {
+        if (matches(name)) {
+            result = name;
+        }
+    }
+    result = "Unknown";
+}
