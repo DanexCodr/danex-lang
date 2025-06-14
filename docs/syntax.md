@@ -48,7 +48,7 @@ For explicit typing or documentation:
 ```
 ### Visibility / Modifiers
 
-If used (e.g., public, private, static, etc.), they must come after any (Type result) clause and before the method name.
+If used (e.g., `public`, `private`, `static`, etc.), they must come after any (Type result) clause and before the method name.
 
 
 ```danex
@@ -69,15 +69,15 @@ Immediate-Return-On-Assignment Warning (“the gotcha”)
 
 Whenever you write:
 
-methodName = value;
+`methodName = value;`
 
 or
 
-result = value;
+`result = value;`
 
 the method ends immediately and returns that value.
 
-Invalid Example
+### Invalid Example
 
 ```danex
 (Int result) factorial(n) {
@@ -90,7 +90,7 @@ Invalid Example
 ```
 
 
-Valid Initialization + Return Pattern
+### Valid Initialization + Return Pattern
 
 
 ```danex
@@ -115,26 +115,31 @@ If any assignment-to-result (implicit return) is present or the method declares 
 
 ### Arrow Form Equivalence
 
-methodName(params) => someExpression;
+`methodName(params) => someExpression;`
 
 is exactly equivalent to:
 
+
+```danex
 methodName(params) {
     methodName = someExpression;     // immediate return
 }
 
-(or result = someExpression; if a result variable is declared). Return type is inferred from the expression unless (Type result) is declared.
+```
+(or `result = someExpression;` if a result variable is declared).
+
+Return type is inferred from the expression unless `(Type result)` is declared.
 
 
 ---
 
 ### Void Methods & Early Exit
 
-If no assignment to the method name or result variable ever occurs in a block, the method is treated as void and runs to completion (unless you exit early via control flow). Introduce a dedicated exit; statement for void methods to allow early exit without returning a value. This behaves like return; in other languages but is only valid in void methods (i.e., methods without a declared result and without any methodName = ...; assignments).
+If no assignment to the method name or result variable ever occurs in a block, the method is treated as void and runs to completion (unless you exit early via control flow). Introduce a dedicated exit; statement for void methods to allow early exit without returning a value. This behaves like return; in other languages but is only valid in void methods (i.e., methods without a declared result and without any `methodName = ...;` assignments).
 
 Syntax
 
-exit;
+`exit;`
 
 ### Examples
 
@@ -176,9 +181,9 @@ Arrow form is not valid for void methods, since it must produce a return value.
 
 ## Type Inference and Explicit Typing
 
-If you don’t declare (Type result), the return type is inferred from the first assignment or from the single expression in an arrow method.
+If you don’t declare `(Type result)`, the return type is inferred from the first assignment or from the single expression in an arrow method.
 
-If you declare (Type result), all return assignments must match that type exactly (mixed types cause a compile error). This serves as documentation or to enforce precise types when inference might be ambiguous.
+If you declare `(Type result)`, all return assignments must match that type exactly (mixed types cause a compile error). This serves as documentation or to enforce precise types when inference might be ambiguous.
 
 
 
@@ -207,9 +212,9 @@ The first assignment to the method name or result ends the method immediately. A
 
 ## Control Flow
 
-You may still use loops, conditionals, break;, continue;, throw;, exit;, etc., inside block methods. But any assignment to the result short-circuits the remainder of the block. And because of the “all paths must assign” rule, ensure every branch either assigns or there is a fallback assignment afterward.
+You may still use loops, conditionals, `break;`, `continue;`, `throw;`, `exit;`, etc., inside block methods. But any assignment to the result short-circuits the remainder of the block. And because of the “all paths must assign” rule, ensure every branch either assigns or there is a fallback assignment afterward.
 
-Example with Loop and Fallback
+### Example with Loop and Fallback
 
 
 ```danex
@@ -228,9 +233,9 @@ Example with Loop and Fallback
 
 ## Integration with Other Features
 
-When integrating with generics, modules, classes, etc., the same rules apply: always use methodName(params) { ... } or methodName(params) => expr;, and assignments to the method name or declared result trigger an immediate return—and must appear on all paths if used.
+When integrating with generics, modules, classes, etc., the same rules apply: always use `methodName(params) { ... }` or `methodName(params) => expr;`, and assignments to the method name or declared result trigger an immediate return—and must appear on all paths if used.
 
-Example in a Class-Like Context
+### Example in a Class-Like Context
 
 ```danex
 class Calculator {
@@ -259,16 +264,16 @@ If your code mysteriously stops running, double-check that you didn’t accident
 
 Always use a temporary local variable for intermediate work, then assign to result once at the end (or in each branch).
 
-Arrow methods are just sugar for a single result = expression; (or methodName = expression;).
+Arrow methods are just sugar for a single `result = expression;` (or `methodName = expression;`).
 
-Void methods can't use exit; unless:
+Void methods can't use `exit;` unless:
 
 There’s no result variable, and
 
 No assignment to the method name happens
 
 
-Modifiers (public, private, etc.) must appear after the result clause:
+Modifiers (`public`, `private`, etc.) must appear after the result clause:
 
 
 ```danex
