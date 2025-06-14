@@ -15,9 +15,13 @@ methodName(params) {
 }
 
 ```
-Expression (Arrow) Form
+### Expression (Arrow) Form
 
+
+```danex
 methodName(params) => expression;
+
+```
 
 Single-expression methods only, must return a value.
 
@@ -32,7 +36,7 @@ methodName(params) {
 
 ```
 
-Result Variable Declaration (Optional)
+### Result Variable Declaration (Optional)
 
 For explicit typing or documentation:
 
@@ -42,7 +46,7 @@ For explicit typing or documentation:
 (Int result) bar(params) => expression;
 
 ```
-Visibility / Modifiers
+### Visibility / Modifiers
 
 If used (e.g., public, private, static, etc.), they must come after any (Type result) clause and before the method name.
 
@@ -57,7 +61,7 @@ If used (e.g., public, private, static, etc.), they must come after any (Type re
 
 ---
 
-Implicit Return Semantics
+## Implicit Return Semantics
 
 Assigning to the method name or to the declared result variable immediately returns that value. Any statements after such an assignment become unreachable.
 
@@ -102,14 +106,14 @@ Valid Initialization + Return Pattern
 
 ---
 
-New Rule: Exhaustive Return Paths
+### New Rule: Exhaustive Return Paths
 
 If any assignment-to-result (implicit return) is present or the method declares a result, then every possible execution path must assign to the method name or result before the method exits. Failure to assign on all paths is a compile-time error.
 
 
 ---
 
-Arrow Form Equivalence
+### Arrow Form Equivalence
 
 methodName(params) => someExpression;
 
@@ -124,7 +128,7 @@ methodName(params) {
 
 ---
 
-Void Methods & Early Exit
+### Void Methods & Early Exit
 
 If no assignment to the method name or result variable ever occurs in a block, the method is treated as void and runs to completion (unless you exit early via control flow). Introduce a dedicated exit; statement for void methods to allow early exit without returning a value. This behaves like return; in other languages but is only valid in void methods (i.e., methods without a declared result and without any methodName = ...; assignments).
 
@@ -132,7 +136,7 @@ Syntax
 
 exit;
 
-Examples
+### Examples
 
 ```danex
 logInfo(message) {
@@ -153,7 +157,7 @@ checkUser(user) {
 }
 
 ```
-Invalid Use
+### Invalid Use
 
 ```danex
 (Int result) test(n) {
@@ -170,7 +174,7 @@ Arrow form is not valid for void methods, since it must produce a return value.
 
 ---
 
-Type Inference and Explicit Typing
+## Type Inference and Explicit Typing
 
 If you don’t declare (Type result), the return type is inferred from the first assignment or from the single expression in an arrow method.
 
@@ -180,7 +184,7 @@ If you declare (Type result), all return assignments must match that type exactl
 
 ---
 
-Naming Rules
+## Naming Rules
 
 Method names cannot be reused as local variable names within the same method, because the method name itself acts as a self-typed variable for implicit return.
 
@@ -194,14 +198,14 @@ sum(a, b) {
 
 ---
 
-Single-Exit Semantics
+## Single-Exit Semantics
 
 The first assignment to the method name or result ends the method immediately. All subsequent code in that block is skipped. Remember: “Assign to result and poof—you’re out!” If you need initialization or intermediate work before returning, use locals first and assign to result only once when you’re done.
 
 
 ---
 
-Control Flow
+## Control Flow
 
 You may still use loops, conditionals, break;, continue;, throw;, exit;, etc., inside block methods. But any assignment to the result short-circuits the remainder of the block. And because of the “all paths must assign” rule, ensure every branch either assigns or there is a fallback assignment afterward.
 
@@ -222,7 +226,7 @@ Example with Loop and Fallback
 
 ---
 
-Integration with Other Features
+## Integration with Other Features
 
 When integrating with generics, modules, classes, etc., the same rules apply: always use methodName(params) { ... } or methodName(params) => expr;, and assignments to the method name or declared result trigger an immediate return—and must appear on all paths if used.
 
@@ -244,7 +248,7 @@ class Calculator {
 ```
 
 ---
-📝 Notes
+## 📝 Notes
 
 Assigning to result or the method name immediately returns from the method.
 
@@ -266,11 +270,14 @@ No assignment to the method name happens
 
 Modifiers (public, private, etc.) must appear after the result clause:
 
+
+```danex
 ✅ (Int result) public doStuff(...)
 
 ❌ public (Int result) doStuff(...)
 
+```
 
 
-Basically:
-💡 Think of the result variable as a trapdoor. Once you step on it, you fall out of the method.
+### Basically:
+> 💡 Think of the result variable as a trapdoor. Once you step on it, you fall out of the method.
