@@ -1,0 +1,24 @@
+# Ignore common system files
+.DS_Store
+Thumbs.db
+
+# Ignore temporary or backup files
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Ignore IDE-specific files
+.idea/
+.vscode/
+*.iml
+
+# ANTLR-generated files (if ever regenerate parser code)
+*.tokens
+*.interp
+*.class
+generated/
+
+# Java N-IDE-specific (just an option)
+bin/
+build/
