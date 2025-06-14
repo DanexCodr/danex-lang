@@ -1,0 +1,6 @@
+logInfo(message) {
+    if (message == null) {
+        exit;
+    }
+    print("LOG: " + message);
+}
