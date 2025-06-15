@@ -7,9 +7,14 @@ on:
 jobs:
   download-antlr:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 💡 This is required to allow git push
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create lib directory
         run: mkdir -p lib
@@ -23,4 +28,4 @@ jobs:
           git config user.email "github-actions@github.com"
           git add lib/antlr-4.9.2-complete.jar
           git commit -m "Add ANTLR jar via GitHub Actions" || echo "Nothing to commit"
-          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:main
+          git push
