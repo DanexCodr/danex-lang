@@ -164,12 +164,12 @@ additiveExpr
     ;
 
 multiplicativeExpr
+multiplicativeExpr
     : unaryExpr ((STAR | DIV | MOD | MOD2) unaryExpr)*
     ;
 
 unaryExpr
-    : (BANG | PLUS | MINUS | AWAIT)? unaryExpr
-    | primaryExpr
+    : (BANG | PLUS | MINUS | AWAIT)* primaryExpr
     ;
 
 primaryExpr
