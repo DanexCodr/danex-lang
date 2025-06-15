@@ -19,8 +19,7 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
         with:
-          # need full history to allow commit/push
-          fetch-depth: 0
+          fetch-depth: 0  # needed for pushing commits
 
       - name: Set up Java
         uses: actions/setup-java@v3
@@ -32,33 +31,35 @@ jobs:
         run: |
           mkdir -p src/danex/ast
 
-      - name: Download ANTLR runtime if not committed
-        if: "!fileExists('lib/antlr-4.9.2-complete.jar')"
+      - name: Download ANTLR runtime if not already present
         run: |
           mkdir -p lib
-          curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
+          if [ ! -f lib/antlr-4.9.2-complete.jar ]; then
+            echo "Downloading ANTLR runtime..."
+            curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
+          else
+            echo "ANTLR JAR already exists."
+          fi
 
       - name: Ensure parser JAR exists
         run: |
           if [ ! -f lib/danex-parser.jar ]; then
-            echo "❌ lib/danex-parser.jar not found. Ensure your parser build step runs before this or commit the JAR."
+            echo "❌ lib/danex-parser.jar not found. Ensure your parser build workflow runs first."
             exit 1
           fi
 
       - name: Compile AstGenerator
         run: |
           mkdir -p bin
-          # Compile with classpath including parser jar and ANTLR runtime in case generator references parser classes:
           javac -cp "lib/danex-parser.jar:lib/antlr-4.9.2-complete.jar" -d bin tools/AstGenerator.java
 
       - name: Run AstGenerator
         run: |
-          # Run with classpath so that any references to parser/lexer classes resolve if needed.
           java -cp "bin:lib/danex-parser.jar:lib/antlr-4.9.2-complete.jar" tools.AstGenerator
 
       - name: Show generated AST files
         run: |
-          echo "Generated AST files under src/danex/ast/:"
+          echo "Generated AST files under src/danex/ast:"
           find src/danex/ast -maxdepth 1 -name "*.java" -printf "  %f\n"
 
       - name: Commit generated AST classes if changed
@@ -66,10 +67,8 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add src/danex/ast
-          # Only commit if there is a diff
           if git diff --cached --quiet; then
             echo "No AST changes to commit."
           else
             git commit -m "chore: regenerate AST classes [skip ci]"
             git push origin HEAD:main
-          fi
