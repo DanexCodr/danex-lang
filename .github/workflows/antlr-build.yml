@@ -29,9 +29,10 @@ jobs:
         run: |
           curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
 
-      - name: Generate ANTLR parser
+      - name: Generate ANTLR Lexer and Parser
         run: |
-          java -jar lib/antlr-4.9.2-complete.jar -Dlanguage=Java -o src/generated -package danex.antlr grammar/Danex*.g4
+          java -jar lib/antlr-4.9.2-complete.jar -Dlanguage=Java -o src/generated -package danex.antlr grammar/DanexLexer.g4
+          java -jar lib/antlr-4.9.2-complete.jar -Dlanguage=Java -o src/generated -package danex.antlr grammar/DanexParser.g4
 
       - name: Compile ANTLR-generated Java files
         run: |
