@@ -7,6 +7,8 @@ on:
 jobs:
   build-antlr:
     runs-on: ubuntu-latest
+  permissions:
+    contents: write  # 💡 This is required to allow git push
 
     steps:
       - name: Checkout repo
