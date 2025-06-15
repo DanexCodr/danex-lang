@@ -1,11 +1,21 @@
-public class MethodDecl extends ASTNode {
-    public String name;
-    public List<String> params; // You can later replace with `Param` objects
-    public ASTNode body;
+// src/danex/ast/MethodDecl.java
+package danex.ast;
 
-    public MethodDecl(String name, List<String> params, ASTNode body) {
+import java.util.List;
+
+public class MethodDecl extends ASTNode {
+    public final String name;
+    public final List<Param> params;
+    public final ASTNode body; // body is a BlockStmt or similar
+
+    public MethodDecl(String name, List<Param> params, ASTNode body) {
         this.name = name;
         this.params = params;
         this.body = body;
+    }
+
+    @Override
+    public String toString() {
+        return "MethodDecl " + name + "(" + params + ") " + body;
     }
 }
