@@ -19,7 +19,7 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Needed to allow committing changes
+          fetch-depth: 0  # Needed for git rebase/push
 
       - name: Set up Java
         uses: actions/setup-java@v3
@@ -28,8 +28,7 @@ jobs:
           java-version: '17'
 
       - name: Ensure AST output directory exists
-        run: |
-          mkdir -p src/danex/ast
+        run: mkdir -p src/danex/ast
 
       - name: Download ANTLR runtime if not already present
         run: |
@@ -66,6 +65,10 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git fetch origin main
+          git rebase origin/main
+
           git add src/danex/ast
           if git diff --cached --quiet; then
             echo "No AST changes to commit."
