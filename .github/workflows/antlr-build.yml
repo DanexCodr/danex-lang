@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write  # Needed for git push, though not used here
+  contents: write
 
 jobs:
   build-antlr:
@@ -31,18 +31,11 @@ jobs:
 
       - name: Generate ANTLR Lexer
         run: |
-          # Generate lexer Java into src/generated; ANTLR writes DanexLexer.tokens to the current directory
           java -jar lib/antlr-4.9.2-complete.jar -Dlanguage=Java -o src/generated -package danex.antlr grammar/DanexLexer.g4
-
-      - name: Copy tokens to grammar directory and clean up
-        run: |
-          # ANTLR placed DanexLexer.tokens in root; copy it so parser can find it via -lib grammar
-          cp DanexLexer.tokens grammar/DanexLexer.tokens
-          rm DanexLexer.tokens
 
       - name: Generate ANTLR Parser
         run: |
-          # Use -lib grammar so ANTLR picks up the copied DanexLexer.tokens in grammar/
+          # ANTLR placed DanexLexer.tokens in grammar/, so just point -lib to grammar/
           java -jar lib/antlr-4.9.2-complete.jar -Dlanguage=Java -o src/generated -package danex.antlr -lib grammar grammar/DanexParser.g4
 
       - name: Compile ANTLR-generated Java files
