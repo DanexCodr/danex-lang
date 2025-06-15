@@ -1,0 +1,43 @@
+name: Generate AstBuilder
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-astbuilder:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Compile AstBuilderGenerator
+        run: |
+          javac -d bin tools/AstBuilderGenerator.java
+
+      - name: Run AstBuilderGenerator
+        run: |
+          java -cp bin tools.AstBuilderGenerator
+
+      - name: Commit generated AstBuilder
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add src/danex/AstBuilder.java
+          git commit -m "chore: Generate AstBuilder.java [skip ci]"
+          git push
+
+      - name: Cleanup workflow (optional self-delete)
+        run: |
+          rm .github/workflows/gen-astbuilder.yml
+          git add .github/workflows/gen-astbuilder.yml
+          git commit -m "chore: Remove self after generating AstBuilder [skip ci]" || echo "Nothing to commit"
+          git push || echo "Nothing to push"
