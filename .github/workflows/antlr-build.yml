@@ -31,7 +31,6 @@ jobs:
 
       - name: Generate ANTLR Lexer
         run: |
-          # Generate lexer Java & tokens into src/generated (preserving path)
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -o src/generated \
@@ -45,7 +44,6 @@ jobs:
 
       - name: Copy .tokens file to output dir
         run: |
-          # The tokens file should be in src/generated/grammar/DanexLexer.tokens
           if [ -f src/generated/grammar/DanexLexer.tokens ]; then
             echo "Found tokens at src/generated/grammar/DanexLexer.tokens, copying to src/generated/"
             cp src/generated/grammar/DanexLexer.tokens src/generated/
@@ -56,7 +54,6 @@ jobs:
 
       - name: Generate ANTLR Parser
         run: |
-          # Use -lib src/generated so ANTLR picks up DanexLexer.tokens in src/generated
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -o src/generated \
@@ -66,7 +63,8 @@ jobs:
 
       - name: Compile ANTLR-generated Java files
         run: |
-          javac -cp lib/antlr-4.9.2-complete.jar -d bin src/generated/*.java src/generated/grammar/*.java
+          find src/generated -name "*.java" > sources.txt
+          javac -cp lib/antlr-4.9.2-complete.jar -d bin @sources.txt
 
       - name: Package to JAR (optional)
         run: |
