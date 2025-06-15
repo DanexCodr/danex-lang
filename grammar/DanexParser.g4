@@ -1,4 +1,4 @@
-// DanexParser.g4
+// Updated DanexParser.g4
 parser grammar DanexParser;
 options { tokenVocab=DanexLexer; }
 
@@ -130,8 +130,18 @@ returnStatement
     : RETURN expression? SEMI
     ;
 
+// Allow compound assignments
 assignment
-    : IDENTIFIER EQ assignment
+    : IDENTIFIER assignOp assignment
+    ;
+
+assignOp
+    : EQ
+    | PLUSEQ
+    | MINUSEQ
+    | STAREQ
+    | DIVEQ
+    | MODEQ
     ;
 
 expression
@@ -156,7 +166,7 @@ nullCoalesceExpr
     ;
 
 comparisonExpr
-    : additiveExpr ((LT | GT | COMPARATOR) additiveExpr)*
+    : additiveExpr ((LT | GT | LE | GE | COMPARATOR | EQEQ | NEQ) additiveExpr)*
     ;
 
 additiveExpr
