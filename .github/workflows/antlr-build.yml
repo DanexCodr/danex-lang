@@ -32,7 +32,7 @@ jobs:
       - name: Generate ANTLR Lexer and Parser
         run: |
           java -jar lib/antlr-4.9.2-complete.jar -Dlanguage=Java -o src/generated -package danex.antlr grammar/DanexLexer.g4
-          java -jar lib/antlr-4.9.2-complete.jar -Dlanguage=Java -o src/generated -package danex.antlr grammar/DanexParser.g4
+          java -jar lib/antlr-4.9.2-complete.jar -Dlanguage=Java -o src/generated -package danex.antlr -lib grammar grammar/DanexParser.g4
 
       - name: Compile ANTLR-generated Java files
         run: |
