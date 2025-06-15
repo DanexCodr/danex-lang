@@ -1,4 +1,4 @@
-// DanexLexer.g4
+// Updated DanexLexer.g4
 lexer grammar DanexLexer;
 
 // ------------------------
@@ -24,6 +24,15 @@ MOD2        : '%%';
 VARARGS     : '...';
 AND_AND     : '&&';
 OR_OR       : '||';
+EQEQ        : '==';
+NEQ         : '!=';
+LE          : '<=';
+GE          : '>=';
+PLUSEQ      : '+=';
+MINUSEQ     : '-=';
+STAREQ      : '*=';
+DIVEQ       : '/=';
+MODEQ       : '%=';
 
 // Keywords (place before IDENTIFIER)
 IF      : 'if';
