@@ -164,10 +164,10 @@ additiveExpr
     ;
 
 multiplicativeExpr
-multiplicativeExpr
     : unaryExpr ((STAR | DIV | MOD | MOD2) unaryExpr)*
     ;
 
+// Fixed unaryExpr: allow multiple prefix operators but no left recursion
 unaryExpr
     : (BANG | PLUS | MINUS | AWAIT)* primaryExpr
     ;
