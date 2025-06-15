@@ -14,6 +14,9 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
+        with:
+          # Ensure we fetch all history for diff checks
+          fetch-depth: 0
 
       - name: Set up Java
         uses: actions/setup-java@v3
@@ -67,7 +70,6 @@ jobs:
       - name: Compile ANTLR-generated Java files
         run: |
           echo "Compiling ANTLR-generated Java files..."
-          # Collect all .java files under src/generated (including subdirs)
           find src/generated -name "*.java" | tee sources.txt
           COUNT=$(wc -l < sources.txt)
           echo "Found $COUNT .java files"
@@ -77,7 +79,7 @@ jobs:
           fi
           javac -cp lib/antlr-4.9.2-complete.jar -d bin @sources.txt
 
-      - name: Package to JAR (optional)
+      - name: Package to JAR
         run: |
           echo "Packaging classes into JAR..."
           jar cf danex-parser.jar -C bin .
@@ -85,8 +87,28 @@ jobs:
           mv danex-parser.jar dist/
           echo "Packaged JAR at dist/danex-parser.jar"
 
-      - name: Upload JAR as artifact (optional)
+      - name: Upload JAR as artifact
         uses: actions/upload-artifact@v4
         with:
           name: danex-parser
           path: dist/danex-parser.jar
+
+      - name: Commit updated danex-parser.jar into lib/
+        if: always()
+        run: |
+          # Configure Git author
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Copy the newly built jar into lib/
+          cp dist/danex-parser.jar lib/danex-parser.jar
+
+          # Stage and commit only if changed
+          git add lib/danex-parser.jar
+          # Check if there is a diff (i.e., new JAR differs from the one in repo)
+          if git diff --cached --quiet; then
+            echo "No changes to lib/danex-parser.jar; skipping commit."
+          else
+            git commit -m "chore: Update danex-parser.jar [skip ci]"
+            git push origin HEAD:main
+          fi
