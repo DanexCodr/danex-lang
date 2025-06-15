@@ -323,7 +323,7 @@ DanexLang allows multiple class declarations per file under specific rules based
 | ----------------------------------- | ----------------------- | ------------------------- | -------------------------- | --------------------------------------------------------- |
 | File has class matching filename    | ✅ Yes                   | ❌ No (all inside primary) | ✅ Nested inside primary    | Primary class encloses all content                        |
 | File has no class matching filename | ❌                       | ✅ Yes                     | ✅ Yes                      | Top-level methods coexist with multiple secondary classes |
-| Multiple classes matching filename  | ❌ Not allowed           | N/A                       | N/A                        | Only one primary class per file                           |
+| Multiple classes matching filename  | ❌ Not allowed           | ✅ Yes                       | ✅ Yes                        | Only one primary class per file                           |
 
 ---
 
