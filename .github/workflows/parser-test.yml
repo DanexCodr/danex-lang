@@ -27,7 +27,7 @@ jobs:
 
       - name: Compile Main.java
         run: |
-          javac -cp "lib/antlr-4.9.2-complete.jar:lib/danex-parser.jar" -d bin examples/Main.java
+          javac -cp "lib/antlr-4.9.2-complete.jar:lib/danex-parser.jar" -d bin src/Main.java
 
       - name: Run Main class
         run: |
