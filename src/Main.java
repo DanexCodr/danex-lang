@@ -8,7 +8,7 @@ import java.io.FileInputStream;
 public class Main {
     public static void main(String[] args) throws Exception {
         // Load your test DanexLang file from /examples
-        CharStream input = CharStreams.fromStream(new FileInputStream("examples/test.danex"));
+        CharStream input = CharStreams.fromStream(new FileInputStream("examples/Hello.danex"));
 
         // Create lexer and parser
         DanexLexer lexer = new DanexLexer(input);
