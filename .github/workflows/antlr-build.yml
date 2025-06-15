@@ -31,53 +31,42 @@ jobs:
 
       - name: Generate ANTLR Lexer
         run: |
+          # Generate lexer Java & tokens into src/generated (preserving path)
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -o src/generated \
             -package danex.antlr \
             grammar/DanexLexer.g4
 
-      - name: Debug & Copy .tokens file to output dir
+      - name: Debug generated files for lexer
         run: |
-          echo "Locating DanexLexer.tokens..."
-          # List possible locations
-          echo "Contents of grammar/:"
-          ls -la grammar/
-          echo "Contents of src/generated/:"
-          ls -la src/generated/
-          echo "Contents of root dir:"
-          ls -la .
+          echo "Listing src/generated directory after lexer generation:"
+          find src/generated -maxdepth 2 -type f | sed 's/^/  /'
 
-          # Now conditionally copy:
-          if [ -f grammar/DanexLexer.tokens ]; then
-            echo "Found tokens in grammar/; copying to src/generated/"
-            cp grammar/DanexLexer.tokens src/generated/
-          elif [ -f src/generated/DanexLexer.tokens ]; then
-            echo "Found tokens in src/generated/; nothing to do (already there)."
-            # Optionally: no copy needed, or copy to ensure location
-            # cp src/generated/DanexLexer.tokens src/generated/
-          elif [ -f DanexLexer.tokens ]; then
-            echo "Found tokens in root; copying to src/generated/"
-            cp DanexLexer.tokens src/generated/
+      - name: Copy .tokens file to output dir
+        run: |
+          # The tokens file should be in src/generated/grammar/DanexLexer.tokens
+          if [ -f src/generated/grammar/DanexLexer.tokens ]; then
+            echo "Found tokens at src/generated/grammar/DanexLexer.tokens, copying to src/generated/"
+            cp src/generated/grammar/DanexLexer.tokens src/generated/
           else
-            echo "ERROR: DanexLexer.tokens not found in any expected location!"
-            # Show full tree for debugging
-            echo "Full repo tree:"
-            find . -maxdepth 3 | sed 's/^/  /'
+            echo "ERROR: DanexLexer.tokens not found at expected location!"
             exit 1
           fi
 
       - name: Generate ANTLR Parser
         run: |
+          # Use -lib src/generated so ANTLR picks up DanexLexer.tokens in src/generated
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -o src/generated \
             -package danex.antlr \
-            -lib grammar grammar/DanexParser.g4
+            -lib src/generated \
+            grammar/DanexParser.g4
 
       - name: Compile ANTLR-generated Java files
         run: |
-          javac -cp lib/antlr-4.9.2-complete.jar -d bin src/generated/*.java
+          javac -cp lib/antlr-4.9.2-complete.jar -d bin src/generated/*.java src/generated/grammar/*.java
 
       - name: Package to JAR (optional)
         run: |
