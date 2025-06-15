@@ -31,6 +31,7 @@ jobs:
 
       - name: Generate ANTLR Lexer
         run: |
+          echo "Generating ANTLR Lexer..."
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -o src/generated \
@@ -44,8 +45,9 @@ jobs:
 
       - name: Copy .tokens file to output dir
         run: |
+          echo "Copying DanexLexer.tokens to src/generated/"
           if [ -f src/generated/grammar/DanexLexer.tokens ]; then
-            echo "Found tokens at src/generated/grammar/DanexLexer.tokens, copying to src/generated/"
+            echo "Found tokens at src/generated/grammar/DanexLexer.tokens"
             cp src/generated/grammar/DanexLexer.tokens src/generated/
           else
             echo "ERROR: DanexLexer.tokens not found at expected location!"
@@ -54,6 +56,7 @@ jobs:
 
       - name: Generate ANTLR Parser
         run: |
+          echo "Generating ANTLR Parser..."
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -o src/generated \
@@ -64,6 +67,7 @@ jobs:
       - name: Compile ANTLR-generated Java files
         run: |
           echo "Compiling ANTLR-generated Java files..."
+          # Collect all .java files under src/generated (including subdirs)
           find src/generated -name "*.java" | tee sources.txt
           COUNT=$(wc -l < sources.txt)
           echo "Found $COUNT .java files"
@@ -75,9 +79,11 @@ jobs:
 
       - name: Package to JAR (optional)
         run: |
+          echo "Packaging classes into JAR..."
           jar cf danex-parser.jar -C bin .
           mkdir -p dist
           mv danex-parser.jar dist/
+          echo "Packaged JAR at dist/danex-parser.jar"
 
       - name: Upload JAR as artifact (optional)
         uses: actions/upload-artifact@v4
