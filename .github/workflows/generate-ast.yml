@@ -19,7 +19,7 @@ jobs:
       - name: Checkout Repo
         uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # needed for pushing commits
+          fetch-depth: 0  # Needed to allow committing changes
 
       - name: Set up Java
         uses: actions/setup-java@v3
