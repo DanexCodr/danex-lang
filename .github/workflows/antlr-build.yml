@@ -31,15 +31,49 @@ jobs:
 
       - name: Generate ANTLR Lexer
         run: |
-          java -jar lib/antlr-4.9.2-complete.jar -Dlanguage=Java -o src/generated -package danex.antlr grammar/DanexLexer.g4
+          java -jar lib/antlr-4.9.2-complete.jar \
+            -Dlanguage=Java \
+            -o src/generated \
+            -package danex.antlr \
+            grammar/DanexLexer.g4
 
-      - name: Copy .tokens file to output dir
+      - name: Debug & Copy .tokens file to output dir
         run: |
-          cp grammar/DanexLexer.tokens src/generated/
+          echo "Locating DanexLexer.tokens..."
+          # List possible locations
+          echo "Contents of grammar/:"
+          ls -la grammar/
+          echo "Contents of src/generated/:"
+          ls -la src/generated/
+          echo "Contents of root dir:"
+          ls -la .
+
+          # Now conditionally copy:
+          if [ -f grammar/DanexLexer.tokens ]; then
+            echo "Found tokens in grammar/; copying to src/generated/"
+            cp grammar/DanexLexer.tokens src/generated/
+          elif [ -f src/generated/DanexLexer.tokens ]; then
+            echo "Found tokens in src/generated/; nothing to do (already there)."
+            # Optionally: no copy needed, or copy to ensure location
+            # cp src/generated/DanexLexer.tokens src/generated/
+          elif [ -f DanexLexer.tokens ]; then
+            echo "Found tokens in root; copying to src/generated/"
+            cp DanexLexer.tokens src/generated/
+          else
+            echo "ERROR: DanexLexer.tokens not found in any expected location!"
+            # Show full tree for debugging
+            echo "Full repo tree:"
+            find . -maxdepth 3 | sed 's/^/  /'
+            exit 1
+          fi
 
       - name: Generate ANTLR Parser
         run: |
-          java -jar lib/antlr-4.9.2-complete.jar -Dlanguage=Java -o src/generated -package danex.antlr -lib grammar grammar/DanexParser.g4
+          java -jar lib/antlr-4.9.2-complete.jar \
+            -Dlanguage=Java \
+            -o src/generated \
+            -package danex.antlr \
+            -lib grammar grammar/DanexParser.g4
 
       - name: Compile ANTLR-generated Java files
         run: |
