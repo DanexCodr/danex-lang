@@ -29,9 +29,20 @@ jobs:
         run: |
           curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
 
-      - name: Generate ANTLR Lexer and Parser
+      - name: Generate ANTLR Lexer
         run: |
-          java -jar lib/antlr-4.9.2-complete.jar -Dlanguage=Java -o src/generated -package danex.antlr grammar/DanexLexer.g4 grammar/DanexParser.g4
+          # Generate lexer Java & tokens into src/generated
+          java -jar lib/antlr-4.9.2-complete.jar -Dlanguage=Java -o src/generated -package danex.antlr grammar/DanexLexer.g4
+
+      - name: Copy tokens to grammar directory
+        run: |
+          # Ensure DanexParser can find DanexLexer.tokens in grammar/
+          cp src/generated/DanexLexer.tokens grammar/DanexLexer.tokens
+
+      - name: Generate ANTLR Parser
+        run: |
+          # Use -lib grammar so ANTLR picks up DanexLexer.tokens
+          java -jar lib/antlr-4.9.2-complete.jar -Dlanguage=Java -o src/generated -package danex.antlr -lib grammar grammar/DanexParser.g4
 
       - name: Compile ANTLR-generated Java files
         run: |
