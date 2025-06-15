@@ -31,6 +31,7 @@ jobs:
 
       - name: Generate ANTLR Lexer
         run: |
+          echo "Generating ANTLR Lexer..."
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -o src/generated \
@@ -44,16 +45,18 @@ jobs:
 
       - name: Copy .tokens file to output dir
         run: |
+          echo "Copying DanexLexer.tokens to src/generated/"
           if [ -f src/generated/grammar/DanexLexer.tokens ]; then
-            echo "Found tokens at src/generated/grammar/DanexLexer.tokens, copying to src/generated/"
+            echo "Found tokens at src/generated/grammar/DanexLexer.tokens"
             cp src/generated/grammar/DanexLexer.tokens src/generated/
           else
-            echo "ERROR: DanexLexer.tokens not found at expected location!"
+            echo "ERROR: DanexLexer.tokens not found at src/generated/grammar/DanexLexer.tokens!"
             exit 1
           fi
 
       - name: Generate ANTLR Parser
         run: |
+          echo "Generating ANTLR Parser..."
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -o src/generated \
@@ -63,14 +66,31 @@ jobs:
 
       - name: Compile ANTLR-generated Java files
         run: |
-          find src/generated -name "*.java" > sources.txt
-          javac -cp lib/antlr-4.9.2-complete.jar -d bin @sources.txt
+          echo "Starting Java compilation..."
+          # Gather all generated Java sources
+          find src/generated -name "*.java" | tee sources.txt
+          FILE_COUNT=$(wc -l < sources.txt)
+          echo "Found $FILE_COUNT Java files to compile."
+          echo "Running javac with verbose output (timeout 120s)..."
+          # Compile with a 120-second timeout; verbose shows each class being loaded/parsed
+          timeout 120s javac -verbose -cp lib/antlr-4.9.2-complete.jar -d bin @sources.txt
+          EXIT_CODE=$?
+          if [ $EXIT_CODE -eq 124 ]; then
+            echo "ERROR: javac timed out after 120 seconds!"
+            exit 1
+          elif [ $EXIT_CODE -ne 0 ]; then
+            echo "ERROR: javac failed with exit code $EXIT_CODE"
+            exit $EXIT_CODE
+          fi
+          echo "Java compilation finished successfully."
 
       - name: Package to JAR (optional)
         run: |
+          echo "Packaging classes into JAR..."
           jar cf danex-parser.jar -C bin .
           mkdir -p dist
           mv danex-parser.jar dist/
+          echo "Packaged JAR at dist/danex-parser.jar"
 
       - name: Upload JAR as artifact (optional)
         uses: actions/upload-artifact@v4
