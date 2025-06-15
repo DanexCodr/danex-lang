@@ -33,9 +33,12 @@ jobs:
         run: |
           java -jar lib/antlr-4.9.2-complete.jar -Dlanguage=Java -o src/generated -package danex.antlr grammar/DanexLexer.g4
 
+      - name: Copy .tokens file to output dir
+        run: |
+          cp grammar/DanexLexer.tokens src/generated/
+
       - name: Generate ANTLR Parser
         run: |
-          # ANTLR placed DanexLexer.tokens in grammar/, so just point -lib to grammar/
           java -jar lib/antlr-4.9.2-complete.jar -Dlanguage=Java -o src/generated -package danex.antlr -lib grammar grammar/DanexParser.g4
 
       - name: Compile ANTLR-generated Java files
