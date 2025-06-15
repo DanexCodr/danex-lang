@@ -1,0 +1,41 @@
+name: Build and Run DanexLang
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: # Allows manual run from GitHub UI
+
+jobs:
+  test-danex:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Create directories
+        run: |
+          mkdir -p lib bin
+
+      - name: Download ANTLR
+        run: |
+          curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
+
+      - name: Extract danex-parser.jar
+        run: |
+          unzip -o danex-parser.zip -d lib/
+
+      - name: Compile Main.java
+        run: |
+          javac -cp "lib/*" -d bin src/Main.java
+
+      - name: Run Main on examples/test.danex
+        run: |
+          echo "Running DanexLang Parser on examples/test.danex"
+          java -cp "bin:lib/*" Main examples/test.danex
