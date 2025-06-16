@@ -3,7 +3,7 @@ package danex;
 import danex.ast.*;
 import java.util.*;
 
-public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
+public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, Decl.Visitor<Void> {
     private Environment globals = new Environment();
     private Environment environment = globals;
 
@@ -17,6 +17,14 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             for (Stmt stmt : statements) execute(stmt);
         } catch (RuntimeError error) {
             System.err.println("Runtime error: " + error.getMessage());
+        }
+    }
+
+    public void interpretDecls(List<Decl> decls) {
+        try {
+            for (Decl decl : decls) decl.accept(this);
+        } catch (RuntimeError error) {
+            System.err.println("Runtime error in declaration: " + error.getMessage());
         }
     }
 
@@ -264,20 +272,22 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     }
 
     @Override
-    public Void visitClassStmt(ClassStmt classStmt) {
+    public Void visitClassDecl(ClassDecl classDecl) {
+        // TODO: implement class declaration: name = " + classDecl.name + "
         throw new RuntimeError("Class declarations not implemented yet.");
         return null;
     }
 
     @Override
-    public Void visitMethodStmt(MethodStmt methodStmt) {
+    public Void visitMethodDecl(MethodDecl methodDecl) {
+        // TODO: implement method declaration: name = " + methodDecl.name + "
         throw new RuntimeError("Method declarations not implemented yet.");
         return null;
     }
 
     @Override
-    public Void visitImportStmt(ImportStmt importStmt) {
-        // 'use' / import: no-op at runtime
+    public Void visitImportDecl(ImportDecl importDecl) {
+        // 'use' / import: no-op at runtime (or record module)
         return null;
     }
 
