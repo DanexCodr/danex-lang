@@ -275,12 +275,17 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
         // TODO: implement class declaration: name = " + classDecl.name + "
         throw new RuntimeError("Class declarations not implemented yet.");
     }
-
+    
     @Override
-    public Void visitMethodDecl(MethodDecl methodDecl) {
-        // TODO: implement method declaration: name = " + methodDecl.name + "
-        throw new RuntimeError("Method declarations not implemented yet.");
-    }
+    public Void visitMethodDecl(MethodDecl decl) {
+    // For now, just print the method info
+    System.out.println("Found method: " + decl.name);
+
+    // In future, store it in a method table for calls
+    // methodTable.put(decl.name, decl);
+
+    return null;
+}
 
     @Override
     public Void visitImportDecl(ImportDecl importDecl) {
