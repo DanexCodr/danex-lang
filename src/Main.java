@@ -1,10 +1,15 @@
 // src/Main.java
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.*;
+
 import danex.antlr.DanexLexer;
 import danex.antlr.DanexParser;
+import danex.AstBuilder;
+import danex.Interpreter;
+import danex.ast.Stmt;
 
 import java.io.FileInputStream;
+import java.util.List;
 
 public class Main {
     public static void main(String[] args) throws Exception {
@@ -12,17 +17,24 @@ public class Main {
             System.err.println("Usage: java Main <path-to-.danex>");
             System.exit(1);
         }
+
         String inputPath = args[0];
         CharStream input = CharStreams.fromStream(new FileInputStream(inputPath));
 
+        // Step 1: Lexing & Parsing
         DanexLexer lexer = new DanexLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         DanexParser parser = new DanexParser(tokens);
 
-        // Call the top-level rule
         ParseTree tree = parser.compilationUnit();
 
-        // Print the parse tree for debugging
-        System.out.println(tree.toStringTree(parser));
+        // Step 2: Build AST
+        AstBuilder builder = new AstBuilder();
+        AstBuildingVisitor visitor = new AstBuildingVisitor(builder);
+        List<Stmt> program = visitor.visit(tree);
+
+        // Step 3: Interpret the AST
+        Interpreter interpreter = new Interpreter();
+        interpreter.interpret(program);
     }
 }
