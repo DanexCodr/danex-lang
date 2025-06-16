@@ -4,7 +4,6 @@ on:
   push:
     paths:
       - 'grammar/**'
-      - 'tools/AstGenerator.java'
       - '.github/workflows/build-antlr-parser.yml'
     branches: [main]
 
@@ -18,8 +17,6 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
 
       - name: Set up Java 17
         uses: actions/setup-java@v3
@@ -37,27 +34,21 @@ jobs:
         run: |
           mkdir -p lib
           if [ ! -f lib/antlr-4.9.2-complete.jar ]; then
-            echo "Downloading ANTLR runtime..."
             curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
-          else
-            echo "Using cached ANTLR runtime."
           fi
 
-      - name: Generate ANTLR Lexer (first stage)
+      - name: Generate ANTLR Lexer and Parser
         run: |
           mkdir -p src/generated
 
+          # Generate lexer
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -package danex.antlr \
             -o src/generated \
             grammar/DanexLexer.g4
 
-          # Move .tokens where parser can find it
-          mv DanexLexer.tokens grammar/
-
-      - name: Generate ANTLR Parser (with visitor support)
-        run: |
+          # Generate parser using the tokens file that now exists in current dir
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -visitor \
@@ -69,10 +60,6 @@ jobs:
       - name: Compile ANTLR-generated sources
         run: |
           find src/generated -name "*.java" > sources.txt
-          if [ ! -s sources.txt ]; then
-            echo "❌ No ANTLR-generated Java files found."
-            exit 1
-          fi
           mkdir -p bin
           javac -cp lib/antlr-4.9.2-complete.jar -d bin @sources.txt
 
