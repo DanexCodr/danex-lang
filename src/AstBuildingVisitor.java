@@ -18,62 +18,108 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         this.builder = builder;
     }
 
+/**
+ * In AstBuildingVisitor (or wherever you need it), add:
+ */
 private boolean detectAssignmentTo(Stmt stmt, String resultName, String methodName) {
-    class Scanner implements Stmt.Visitor<Boolean>, Expr.Visitor<Boolean> {
-        // Expr visitors: only recurse into sub-exprs
-        @Override public Boolean visitBinaryExpr(BinaryExpr be) {
+    // Scanner will walk the AST subtree (Stmt, Expr, Decl) looking for an AssignStmt
+    // whose target matches either resultName or methodName.
+    class Scanner implements Stmt.Visitor<Boolean>, Expr.Visitor<Boolean>, Decl.Visitor<Boolean> {
+        // ---- Expr visitor methods ----
+        @Override
+        public Boolean visitBinaryExpr(BinaryExpr be) {
+            // Recurse into left and right
             return scanExpr(be.left) || scanExpr(be.right);
         }
-        @Override public Boolean visitUnaryExpr(UnaryExpr ue) {
+        @Override
+        public Boolean visitUnaryExpr(UnaryExpr ue) {
             return scanExpr(ue.right);
         }
-        @Override public Boolean visitLiteralExpr(LiteralExpr le) {
+        @Override
+        public Boolean visitLiteralExpr(LiteralExpr le) {
             return false;
         }
-        @Override public Boolean visitGroupingExpr(GroupingExpr ge) {
+        @Override
+        public Boolean visitGroupingExpr(GroupingExpr ge) {
             return scanExpr(ge.expression);
         }
-        @Override public Boolean visitVariableExpr(VariableExpr ve) {
+        @Override
+        public Boolean visitVariableExpr(VariableExpr ve) {
             return false;
         }
-        @Override public Boolean visitAssignExpr(AssignExpr ae) {
-            // assignments in expressions are usually only in ExprStmt; but still check inner:
-            boolean inner = scanExpr(ae.value);
-            // The outer AssignStmt visitor handles checking target
-            return inner;
+        @Override
+        public Boolean visitAssignExpr(AssignExpr ae) {
+            // In expressions, assignment might also appear, but we treat as Expr; 
+            // actual assignment to resultName/methodName is handled in AssignStmt visitor.
+            // Here we descend into the value expression:
+            return scanExpr(ae.value);
         }
-        @Override public Boolean visitCallExpr(CallExpr ce) {
-            boolean found = scanExpr(ce.callee);
+        @Override
+        public Boolean visitCallExpr(CallExpr ce) {
+            // Recurse into callee and arguments
+            if (scanExpr(ce.callee)) return true;
             for (Expr arg : ce.arguments) {
                 if (scanExpr(arg)) return true;
             }
-            return found;
-        }
-        @Override public Boolean visitLambdaExpr(LambdaExpr le) { return false; }
-        @Override public Boolean visitDoExpr(DoExpr de) { 
-            for (Stmt s: de.body) if (scanStmt(s)) return true;
             return false;
         }
-        @Override public Boolean visitTryExpr(TryExpr te) {
-            for (Stmt s: te.tryBlock) if (scanStmt(s)) return true;
-            if (te.catchBlock != null) for (Stmt s: te.catchBlock) if (scanStmt(s)) return true;
-            if (te.finallyBlock != null) for (Stmt s: te.finallyBlock) if (scanStmt(s)) return true;
+        @Override
+        public Boolean visitLambdaExpr(LambdaExpr le) {
+            // If your language supports nested functions, you may or may not want to scan inside;
+            // but typically result assignment detection is per-method, so skip inside lambda:
             return false;
         }
-        @Override public Boolean visitAwaitExpr(AwaitExpr ae) { return false; }
-        @Override public Boolean visitNullCoalesceExpr(NullCoalesceExpr ne) {
+        @Override
+        public Boolean visitDoExpr(DoExpr de) {
+            // Descend into the body statements
+            for (Stmt s : de.body) {
+                if (scanStmt(s)) return true;
+            }
+            return false;
+        }
+        @Override
+        public Boolean visitTryExpr(TryExpr te) {
+            // Descend into try/catch/finally blocks
+            if (te.tryBlock != null) {
+                for (Stmt s : te.tryBlock) {
+                    if (scanStmt(s)) return true;
+                }
+            }
+            if (te.catchBlock != null) {
+                for (Stmt s : te.catchBlock) {
+                    if (scanStmt(s)) return true;
+                }
+            }
+            if (te.finallyBlock != null) {
+                for (Stmt s : te.finallyBlock) {
+                    if (scanStmt(s)) return true;
+                }
+            }
+            return false;
+        }
+        @Override
+        public Boolean visitAwaitExpr(AwaitExpr ae) {
+            // Likely skip or descend if needed; here assume skip
+            return false;
+        }
+        @Override
+        public Boolean visitNullCoalesceExpr(NullCoalesceExpr ne) {
             return scanExpr(ne.left) || scanExpr(ne.right);
         }
-        @Override public Boolean visitComparatorExpr(ComparatorExpr ce) {
+        @Override
+        public Boolean visitComparatorExpr(ComparatorExpr ce) {
             return scanExpr(ce.left) || scanExpr(ce.right);
         }
 
-        // Stmt visitors
-        @Override public Boolean visitExprStmt(ExprStmt es) {
+        // ---- Stmt visitor methods ----
+        @Override
+        public Boolean visitExprStmt(ExprStmt es) {
+            // An expression statement: check inside expression
             return scanExpr(es.expression);
         }
-        @Override public Boolean visitAssignStmt(AssignStmt stmt) {
-            // Check if target is a VariableExpr matching resultName or methodName
+        @Override
+        public Boolean visitAssignStmt(AssignStmt stmt) {
+            // Check if the assignment target matches resultName or methodName:
             Expr tgt = stmt.target;
             if (tgt instanceof VariableExpr) {
                 String var = ((VariableExpr) tgt).name;
@@ -81,66 +127,108 @@ private boolean detectAssignmentTo(Stmt stmt, String resultName, String methodNa
                     return true;
                 }
             }
-            // still scan value:
+            // Also descend into the value expression:
             return scanExpr(stmt.value);
         }
-        @Override public Boolean visitBlockStmt(BlockStmt bs) {
-            for (Stmt s: bs.statements) {
+        @Override
+        public Boolean visitBlockStmt(BlockStmt bs) {
+            for (Stmt s : bs.statements) {
                 if (scanStmt(s)) return true;
             }
             return false;
         }
-        @Override public Boolean visitIfStmt(IfStmt ifs) {
+        @Override
+        public Boolean visitIfStmt(IfStmt ifs) {
             if (scanExpr(ifs.condition)) return true;
             if (scanStmt(ifs.thenBranch)) return true;
             if (ifs.elseBranch != null && scanStmt(ifs.elseBranch)) return true;
             return false;
         }
-        @Override public Boolean visitWhileStmt(WhileStmt ws) {
+        @Override
+        public Boolean visitWhileStmt(WhileStmt ws) {
             if (scanExpr(ws.condition)) return scanStmt(ws.body);
             return false;
         }
-        @Override public Boolean visitDoWhileStmt(DoWhileStmt dws) {
+        @Override
+        public Boolean visitDoWhileStmt(DoWhileStmt dws) {
             if (scanStmt(dws.body)) return true;
             return scanExpr(dws.condition);
         }
-        @Override public Boolean visitForStmt(ForStmt fs) {
+        @Override
+        public Boolean visitForStmt(ForStmt fs) {
             if (fs.init != null && scanStmt(fs.init)) return true;
             if (fs.condition != null && scanExpr(fs.condition)) return true;
             if (fs.update != null && scanExpr(fs.update)) return true;
             return scanStmt(fs.body);
         }
-        @Override public Boolean visitThrowStmt(ThrowStmt ts) {
+        @Override
+        public Boolean visitThrowStmt(ThrowStmt ts) {
             return scanExpr(ts.exception);
         }
-        @Override public Boolean visitExitStmt(ExitStmt es) {
+        @Override
+        public Boolean visitExitStmt(ExitStmt es) {
             return false;
         }
-        @Override public Boolean visitTryStmt(TryStmt ts) {
-            for (Stmt s: ts.tryBlock) if (scanStmt(s)) return true;
-            if (ts.catchBlock != null) for (Stmt s: ts.catchBlock) if (scanStmt(s)) return true;
-            if (ts.finallyBlock != null) for (Stmt s: ts.finallyBlock) if (scanStmt(s)) return true;
+        @Override
+        public Boolean visitTryStmt(TryStmt ts) {
+            if (ts.tryBlock != null) {
+                for (Stmt s : ts.tryBlock) {
+                    if (scanStmt(s)) return true;
+                }
+            }
+            if (ts.catchBlock != null) {
+                for (Stmt s : ts.catchBlock) {
+                    if (scanStmt(s)) return true;
+                }
+            }
+            if (ts.finallyBlock != null) {
+                for (Stmt s : ts.finallyBlock) {
+                    if (scanStmt(s)) return true;
+                }
+            }
             return false;
         }
-        @Override public Boolean visitClassDecl(ClassDecl cd) { return false; }
-        @Override public Boolean visitMethodDecl(MethodDecl md) { return false; }
-        @Override public Boolean visitImportDecl(ImportDecl id) { return false; }
-        @Override public Boolean visitAnnotation(Annotation a) { return false; }
-        @Override public Boolean visitParam(Param p) { return false; }
-        @Override public Boolean visitResourceDecl(ResourceDecl rd) { return false; }
+        // Note: classDecl and methodDecl in a statement context are Decl nodes handled elsewhere,
+        // but since we implement Decl.Visitor<Boolean>, we must provide these methods:
+        @Override
+        public Boolean visitClassDecl(ClassDecl cd) {
+            // We typically do not scan inside nested class declarations for method-return detection here
+            return false;
+        }
+        @Override
+        public Boolean visitMethodDecl(MethodDecl md) {
+            // Not descending into nested method here
+            return false;
+        }
+        @Override
+        public Boolean visitImportDecl(ImportDecl id) {
+            return false;
+        }
+        @Override
+        public Boolean visitAnnotation(Annotation a) {
+            return false;
+        }
+        @Override
+        public Boolean visitParam(Param p) {
+            return false;
+        }
+        @Override
+        public Boolean visitResourceDecl(ResourceDecl rd) {
+            return false;
+        }
 
+        // ---- Helpers to dispatch ----
         private Boolean scanExpr(Expr e) {
-            if (e == null) return false;
-            return e.accept(this);
+            return (e != null) && e.accept(this);
         }
         private Boolean scanStmt(Stmt s) {
-            if (s == null) return false;
-            return s.accept(this);
+            return (s != null) && s.accept(this);
         }
     }
+
     Scanner scanner = new Scanner();
     return scanner.scanStmt(stmt);
-}
+        }
     
     /**
      * Top-level: collect declarations (ImportDecl, ClassDecl, MethodDecl).
