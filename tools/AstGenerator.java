@@ -1,9 +1,14 @@
-// tools/AstGenerator.java
 package tools;
 
-import java.io.*;
-import java.nio.file.*;
-import java.util.*;
+import java.io.BufferedWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 public class AstGenerator {
     // Output directory for generated AST .java files
@@ -19,6 +24,7 @@ public class AstGenerator {
         generateASTNode();
         generateExprBase();
         generateStmtBase();
+        generateDeclBase();
 
         // Expression subclasses
         List<NodeDef> exprNodes = Arrays.asList(
@@ -30,7 +36,7 @@ public class AstGenerator {
             new NodeDef("AssignExpr", Arrays.asList("String name", "Expr value")),
             new NodeDef("CallExpr", Arrays.asList("Expr callee", "List<Expr> arguments")),
             new NodeDef("LambdaExpr", Arrays.asList("List<String> params", "Expr body")),
-            new NodeDef("DoExpr", Arrays.asList("List<Stmt> body")),       // adjust fields as needed
+            new NodeDef("DoExpr", Arrays.asList("List<Stmt> body")),
             new NodeDef("TryExpr", Arrays.asList("Expr tryBody", "String exceptionName", "Expr catchBody", "Expr finallyBody")),
             new NodeDef("AwaitExpr", Arrays.asList("Expr expression")),
             new NodeDef("NullCoalesceExpr", Arrays.asList("Expr left", "Expr right")),
@@ -51,13 +57,20 @@ public class AstGenerator {
             new NodeDef("ReturnStmt", Arrays.asList("Expr value")),
             new NodeDef("ThrowStmt", Arrays.asList("Expr exception")),
             new NodeDef("ExitStmt", Collections.emptyList()),
-            new NodeDef("TryStmt", Arrays.asList("List<Stmt> tryBlock", "String exceptionName", "List<Stmt> catchBlock", "List<Stmt> finallyBlock")),
-            new NodeDef("ClassStmt", Arrays.asList("String name", "List<Stmt> members")),
-            new NodeDef("MethodStmt", Arrays.asList("String name", "List<String> params", "List<Stmt> body")),
-            new NodeDef("ImportStmt", Arrays.asList("String moduleName", "String alias")) // alias may be null if not used
+            new NodeDef("TryStmt", Arrays.asList("List<Stmt> tryBlock", "String exceptionName", "List<Stmt> catchBlock", "List<Stmt> finallyBlock"))
         );
         for (NodeDef nd : stmtNodes) {
             generateStmtSubclass(nd);
+        }
+
+        // Declaration subclasses
+        List<NodeDef> declNodes = Arrays.asList(
+            new NodeDef("MethodDecl", Arrays.asList("String name", "String resultType", "List<Annotation> annotations", "List<String> modifiers", "List<Param> params", "Object body")),
+            new NodeDef("ClassDecl", Arrays.asList("String name", "List<Annotation> annotations", "List<String> modifiers", "List<Stmt> members")),
+            new NodeDef("ImportDecl", Arrays.asList("String moduleName", "String alias"))
+        );
+        for (NodeDef nd : declNodes) {
+            generateDeclSubclass(nd);
         }
 
         System.out.println("AST classes generated in " + OUTPUT_DIR);
@@ -89,13 +102,12 @@ public class AstGenerator {
         String pkg = "danex.ast";
         String className = "Expr";
         Path file = Paths.get(OUTPUT_DIR, className + ".java");
+        String[] concreteExprs = {"BinaryExpr","UnaryExpr","LiteralExpr","GroupingExpr","VariableExpr","AssignExpr","CallExpr","LambdaExpr","DoExpr","TryExpr","AwaitExpr","NullCoalesceExpr","ComparatorExpr"};
         try (BufferedWriter w = Files.newBufferedWriter(file)) {
             w.write("package " + pkg + ";"); w.newLine(); w.newLine();
             w.write("public abstract class " + className + " extends ASTNode {"); w.newLine();
             // Visitor interface
             w.write("    public interface Visitor<R> {"); w.newLine();
-            // One method per concrete Expr: we know names in exprNodes list
-            String[] concreteExprs = {"BinaryExpr","UnaryExpr","LiteralExpr","GroupingExpr","VariableExpr","AssignExpr","CallExpr","LambdaExpr","DoExpr","TryExpr","AwaitExpr","NullCoalesceExpr","ComparatorExpr"};
             for (String ce : concreteExprs) {
                 w.write("        R visit" + ce + "(" + ce + " " + decap(ce) + ");"); w.newLine();
             }
@@ -110,15 +122,32 @@ public class AstGenerator {
         String pkg = "danex.ast";
         String className = "Stmt";
         Path file = Paths.get(OUTPUT_DIR, className + ".java");
+        String[] concreteStmts = {"ExprStmt","BlockStmt","IfStmt","WhileStmt","DoWhileStmt","ForStmt","ReturnStmt","ThrowStmt","ExitStmt","TryStmt"};
         try (BufferedWriter w = Files.newBufferedWriter(file)) {
             w.write("package " + pkg + ";"); w.newLine(); w.newLine();
             w.write("public abstract class " + className + " extends ASTNode {"); w.newLine();
             // Visitor interface
             w.write("    public interface Visitor<R> {"); w.newLine();
-            String[] concreteStmts = {"ExprStmt","BlockStmt","IfStmt","WhileStmt","DoWhileStmt","ForStmt","ReturnStmt","ThrowStmt","ExitStmt","TryStmt","ClassStmt","MethodStmt","ImportStmt"};
             for (String cs : concreteStmts) {
                 w.write("        R visit" + cs + "(" + cs + " " + decap(cs) + ");"); w.newLine();
             }
+            w.write("    }"); w.newLine(); w.newLine();
+            w.write("    public abstract <R> R accept(Visitor<R> visitor);"); w.newLine();
+            w.write("}"); w.newLine();
+        }
+    }
+
+    private static void generateDeclBase() throws IOException {
+        String pkg = "danex.ast";
+        String className = "Decl";
+        Path file = Paths.get(OUTPUT_DIR, className + ".java");
+        try (BufferedWriter w = Files.newBufferedWriter(file)) {
+            w.write("package " + pkg + ";"); w.newLine(); w.newLine();
+            w.write("public abstract class " + className + " extends ASTNode {"); w.newLine();
+            w.write("    public interface Visitor<R> {"); w.newLine();
+            w.write("        R visitMethodDecl(MethodDecl methodDecl);"); w.newLine();
+            w.write("        R visitClassDecl(ClassDecl classDecl);"); w.newLine();
+            w.write("        R visitImportDecl(ImportDecl importDecl);"); w.newLine();
             w.write("    }"); w.newLine(); w.newLine();
             w.write("    public abstract <R> R accept(Visitor<R> visitor);"); w.newLine();
             w.write("}"); w.newLine();
@@ -188,6 +217,43 @@ public class AstGenerator {
             w.write("    @Override"); w.newLine();
             w.write("    public <R> R accept(Visitor<R> visitor) {"); w.newLine();
             w.write("        return visitor.visit" + nd.className + "(this);"); w.newLine();
+            w.write("    }"); w.newLine();
+            w.write("}"); w.newLine();
+        }
+    }
+
+    private static void generateDeclSubclass(NodeDef nd) throws IOException {
+        String pkg = "danex.ast";
+        Path file = Paths.get(OUTPUT_DIR, nd.className + ".java");
+        try (BufferedWriter w = Files.newBufferedWriter(file)) {
+            w.write("package " + pkg + ";"); w.newLine(); w.newLine();
+            w.write("import java.util.*;"); w.newLine();
+            w.write("public class " + nd.className + " extends Decl {"); w.newLine();
+            // Fields
+            for (String field : nd.fields) {
+                w.write("    public final " + field + ";"); w.newLine();
+            }
+            w.newLine();
+            // Constructor
+            w.write("    public " + nd.className + "(");
+            for (int i = 0; i < nd.fields.size(); i++) {
+                String f = nd.fields.get(i);
+                w.write(f);
+                if (i < nd.fields.size() - 1) w.write(", ");
+            }
+            w.write(") {"); w.newLine();
+            for (String field : nd.fields) {
+                String name = field.split(" ")[1];
+                w.write("        this." + name + " = " + name + ";"); w.newLine();
+            }
+            w.write("    }"); w.newLine(); w.newLine();
+            // accept method
+            w.write("    @Override"); w.newLine();
+            w.write("    public <R> R accept(Visitor<R> visitor) {"); w.newLine();
+            w.write("        switch(visitor) {"); w.newLine();
+            // Single accept call: visitor.visitXxx(this)
+            w.write("            default: return visitor.visit" + nd.className + "(this);"); w.newLine();
+            w.write("        }"); w.newLine();
             w.write("    }"); w.newLine();
             w.write("}"); w.newLine();
         }
