@@ -1,4 +1,4 @@
-// === AstGenerator.java ===
+// === AstGenerator.java ===.
 package tools;
 
 import java.io.BufferedWriter;
