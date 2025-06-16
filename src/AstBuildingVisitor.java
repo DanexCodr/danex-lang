@@ -115,6 +115,10 @@ public Object visitTopLevelMethodDecl(DanexParser.TopLevelMethodDeclContext ctx)
 private Decl buildMethod(DanexParser.MethodDeclContext ctx) {
     List<Annotation> annotations = buildAnnotations(ctx.annotation());
     List<String> modifiers = buildModifiers(ctx.modifier());
+
+    if (ctx.IDENTIFIER() == null) {
+        throw new RuntimeException("MethodDecl is missing a name.");
+    }
     String name = ctx.IDENTIFIER().getText();
 
     String resultType = null;
@@ -130,18 +134,22 @@ private Decl buildMethod(DanexParser.MethodDeclContext ctx) {
     Stmt bodyStmt = buildMethodBody(name, resultName, ctx.methodBody());
 
     MethodDecl methodNode = new MethodDecl(name, resultType, resultName, annotations, modifiers, params, bodyStmt);
-    MethodDecl built = (MethodDecl) builder.visitMethodDecl(methodNode);
-if (built == null || built.name == null) {
-    throw new RuntimeException("builder.visitMethodDecl() returned null or invalid MethodDecl");
+    
+    if (methodNode.name == null) {
+        throw new RuntimeException("Built method has null name.");
+    }
+    System.out.println("[DEBUG] Built method: " + methodNode.name);
+    
+    return builder.visitMethodDecl(methodNode);
 }
-return built;}
 
-/**
- * Helper for TopLevelMethodDeclContext.
- */
 private Decl buildTopLevelMethod(DanexParser.TopLevelMethodDeclContext ctx) {
     List<Annotation> annotations = buildAnnotations(ctx.annotation());
     List<String> modifiers = buildModifiers(ctx.modifier());
+
+    if (ctx.IDENTIFIER() == null) {
+        throw new RuntimeException("TopLevelMethodDecl is missing a name.");
+    }
     String name = ctx.IDENTIFIER().getText();
 
     String resultType = null;
@@ -157,78 +165,13 @@ private Decl buildTopLevelMethod(DanexParser.TopLevelMethodDeclContext ctx) {
     Stmt bodyStmt = buildMethodBody(name, resultName, ctx.methodBody());
 
     MethodDecl methodNode = new MethodDecl(name, resultType, resultName, annotations, modifiers, params, bodyStmt);
-    MethodDecl built = (MethodDecl) builder.visitMethodDecl(methodNode);
-if (built == null || built.name == null) {
-    throw new RuntimeException("builder.visitMethodDecl() returned null or invalid MethodDecl");
-}
-return built;
-}
 
-/**
- * Shared param builder for both MethodDeclContext and TopLevelMethodDeclContext.
- */
-private List<Param> buildParams(DanexParser.ParamListContext paramListCtx) {
-    List<Param> params = new ArrayList<>();
-    if (paramListCtx != null) {
-        for (var pCtx : paramListCtx.param()) {
-            String pType = pCtx.type().getText();
-            String pName = pCtx.IDENTIFIER().getText();
-            boolean varargs = pCtx.VARARGS() != null;
-            Param paramNode = new Param(pType, pName, varargs);
-            paramNode = (Param) builder.visitParam(paramNode);
-            params.add(paramNode);
-        }
+    if (methodNode.name == null) {
+        throw new RuntimeException("Built top-level method has null name.");
     }
-    return params;
-}
+    System.out.println("[DEBUG] Built top-level method: " + methodNode.name);
 
-/**
- * Shared annotations builder.
- */
-private List<Annotation> buildAnnotations(List<DanexParser.AnnotationContext> annotationCtxs) {
-    List<Annotation> annotations = new ArrayList<>();
-    for (var annCtx : annotationCtxs) {
-        Object annObj = visit(annCtx);
-        if (annObj instanceof Annotation) {
-            annotations.add((Annotation) annObj);
-        }
-    }
-    return annotations;
-}
-
-/**
- * Shared modifier builder.
- */
-private List<String> buildModifiers(List<DanexParser.ModifierContext> modifierCtxs) {
-    List<String> modifiers = new ArrayList<>();
-    for (var m : modifierCtxs) {
-        modifiers.add(m.getText());
-    }
-    return modifiers;
-}
-
-/**
- * Shared method body builder: handles both block and expression bodies.
- */
-private Stmt buildMethodBody(String methodName, String resultName, DanexParser.MethodBodyContext bodyCtx) {
-    if (bodyCtx.block() != null) {
-        Object bObj = visit(bodyCtx.block());
-        if (!(bObj instanceof Stmt)) {
-            throw new RuntimeException("Expected Stmt from block, got: " + bObj);
-        }
-        return (Stmt) bObj;
-    } else {
-        Expr expr = (Expr) visit(bodyCtx.expression());
-        String target = (resultName != null) ? resultName : methodName;
-        AssignExpr assign = new AssignExpr(target, expr);
-        assign = (AssignExpr) builder.visitAssignExpr(assign);
-        ExprStmt exprStmt = new ExprStmt(assign);
-        exprStmt = (ExprStmt) builder.visitExprStmt(exprStmt);
-        List<Stmt> stmts = new ArrayList<>();
-        stmts.add(exprStmt);
-        BlockStmt block = new BlockStmt(stmts);
-        return (BlockStmt) builder.visitBlockStmt(block);
-    }
+    return builder.visitMethodDecl(methodNode);
 }
     
     // -------------------
