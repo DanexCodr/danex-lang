@@ -183,8 +183,8 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
 
 @Override
 public Void visitAssignStmt(AssignStmt stmt) {
-    Object value = evaluate(stmt.expr);
-    environment.assign(stmt.name, value);
+    Object value = evaluate(stmt.value);
+    environment.assign(stmt.varName, value);
     return null;
 }
     
@@ -285,5 +285,9 @@ public Void visitAssignStmt(AssignStmt stmt) {
         // 'use' / import: no-op or record module as needed
         return null;
     }
-
+@Override
+public Void visitResourceDecl(ResourceDecl decl) {
+    // No-op for now, unless you want resources to register something
+    return null;
+}
 }
