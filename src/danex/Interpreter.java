@@ -7,9 +7,13 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
     private Environment globals = new Environment();
     private Environment environment = globals;
 
-    private static class Return extends RuntimeException {
-        final Object value;
-        Return(Object value) { super(null, null, false, false); this.value = value; }
+    public static class Return extends RuntimeException {
+    public final Object value;
+
+    public Return(Object value) {
+        super(null, null, false, false);
+        this.value = value;
+    }
     }
 
 public void executeInEnvironment(Stmt stmt, Environment newEnv) {
