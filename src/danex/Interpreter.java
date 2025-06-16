@@ -270,7 +270,6 @@ public Void visitAssignStmt(AssignStmt stmt) {
     public Void visitThrowStmt(ThrowStmt throwStmt) {
         Object ex = evaluate(throwStmt.exception);
         throw new RuntimeError(toStr(ex));
-        return null;
     }
 
     @Override
@@ -296,14 +295,12 @@ public Void visitAssignStmt(AssignStmt stmt) {
     public Void visitClassDecl(ClassDecl classDecl) {
         // TODO: implement class declaration: name = " + classDecl.name + "
         throw new RuntimeError("Class declarations not implemented yet.");
-        return null;
     }
 
     @Override
     public Void visitMethodDecl(MethodDecl methodDecl) {
         // TODO: implement method declaration: name = " + methodDecl.name + "
         throw new RuntimeError("Method declarations not implemented yet.");
-        return null;
     }
 
     @Override
