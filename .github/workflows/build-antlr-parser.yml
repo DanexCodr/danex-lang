@@ -47,22 +47,13 @@ jobs:
         run: |
           mkdir -p src/generated
 
-          # Generate Lexer
+          # Compile both lexer and parser together
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -visitor \
             -o src/generated \
             -package danex.antlr \
-            grammar/DanexLexer.g4
-
-          # Generate Parser (now with tokens available)
-          java -jar lib/antlr-4.9.2-complete.jar \
-            -Dlanguage=Java \
-            -visitor \
-            -o src/generated \
-            -package danex.antlr \
-            -lib src/generated \
-            grammar/DanexParser.g4
+            grammar/DanexLexer.g4 grammar/DanexParser.g4
 
       - name: Compile ANTLR-generated sources
         run: |
