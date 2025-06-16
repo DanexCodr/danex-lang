@@ -33,34 +33,28 @@ jobs:
 
       - name: Generate Lexer and Parser
         run: |
-          mkdir -p src/danex/grammar
+          mkdir -p src/danex
 
           echo "Generating lexer..."
           java -jar lib/antlr.jar \
             -Dlanguage=Java \
             -visitor \
             -package danex.grammar \
-            -o src/danex/grammar \
+            -o src/danex \
             grammar/DanexLexer.g4
 
           echo "Locating .tokens file..."
-          TOKENS=$(find src/danex/grammar -name "DanexLexer.tokens")
-          if [ -z "$TOKENS" ]; then
-            echo "❌ DanexLexer.tokens not found!"
-            exit 1
-          fi
+          TOKENS_DIR=$(find src/danex/grammar -name DanexLexer.tokens -exec dirname {} \;)
+          echo "Found tokens in: $TOKENS_DIR"
 
           echo "Generating parser..."
           java -jar lib/antlr.jar \
             -Dlanguage=Java \
             -visitor \
             -package danex.grammar \
-            -o src/danex/grammar \
-            -lib grammar \
+            -o src/danex \
+            -lib "$TOKENS_DIR" \
             grammar/DanexParser.g4
-
-          # Optional cleanup if grammar/ subfolder was generated
-          rm -rf src/danex/grammar/grammar
 
       - name: Commit generated files
         run: |
