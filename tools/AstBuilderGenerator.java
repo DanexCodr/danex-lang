@@ -41,7 +41,7 @@ public class AstBuilderGenerator {
             sb.append("package danex;\n\n");
             sb.append("import danex.ast.*;\n");
             sb.append("import java.util.*;\n\n");
-            sb.append("public class AstBuilder implements Expr.Visitor<Object>, Stmt.Visitor<Object> {\n\n");
+            sb.append("public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt> {\n\n");
 
             for (AstClass cls : astClasses) {
     if (cls.className.equals("Expr") || cls.className.equals("Stmt")) continue;
