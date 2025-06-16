@@ -37,48 +37,35 @@ jobs:
             curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
           fi
 
-      - name: 📁 Create output directory
-        run: mkdir -p src/generated
+      - name: 🧹 Prepare output directory
+        run: mkdir -p src/danex/parser
 
-      - name: 🔍 Debug: List all grammar-related files
-        run: |
-          echo "::group::Grammar directory structure"
-          find grammar -type f
-          echo "::endgroup::"
-
-      - name: 🧠 Step 1: Generate Lexer
+      - name: 🧠 Step 1: Generate Lexer to `src/danex/parser`
         run: |
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
-            -package danex.antlr \
-            -o src/generated \
+            -package danex.parser \
+            -o src/danex/parser \
             grammar/DanexLexer.g4
 
-      - name: 🔍 Debug: Check for generated .tokens file
-        run: |
-          echo "::group::Searching for .tokens files"
-          find . -name "*.tokens"
-          echo "::endgroup::"
-
-      - name: 🧠 Step 2: Generate Parser
+      - name: 🧠 Step 2: Generate Parser to `src/danex/parser`
         run: |
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -visitor \
-            -package danex.antlr \
-            -o src/generated \
-            -lib grammar \
+            -package danex.parser \
+            -o src/danex/parser \
             grammar/DanexParser.g4
 
-      - name: 🔍 Debug: List generated Java files
+      - name: 🔍 Debug: Show contents of src/danex/parser
         run: |
-          echo "::group::Generated Java files"
-          find src/generated -name "*.java"
+          echo "::group::Generated ANTLR Java Files"
+          find src/danex/parser -name "*.java"
           echo "::endgroup::"
 
       - name: 🛠️ Compile ANTLR-generated sources
         run: |
-          find src/generated -name "*.java" > sources.txt
+          find src/danex/parser -name "*.java" > sources.txt
           mkdir -p bin
           javac -cp lib/antlr-4.9.2-complete.jar -d bin @sources.txt
 
