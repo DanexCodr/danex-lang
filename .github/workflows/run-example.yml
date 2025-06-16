@@ -1,0 +1,44 @@
+# .github/workflows/run-example.yml
+name: Run DanexLang Example
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  run-example:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Cache ANTLR runtime JAR
+        uses: actions/cache@v3
+        with:
+          path: lib/antlr-4.9.2-complete.jar
+          key: antlr-runtime-v4.9.2
+
+      - name: Ensure ANTLR runtime JAR present
+        run: |
+          mkdir -p lib
+          if [ ! -f lib/antlr-4.9.2-complete.jar ]; then
+            curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
+          fi
+
+      - name: Compile and run example
+        run: |
+          # If your example depends on parser or AST, regenerate or compile as needed here:
+          # For simplicity, assume generated code and parser classes are committed or available.
+          javac -cp "lib/antlr-4.9.2-complete.jar:lib/danex-parser.jar:bin" -d bin src/Main.java
+          java -cp "bin:lib/antlr-4.9.2-complete.jar:lib/danex-parser.jar" Main example/Hello.danex
