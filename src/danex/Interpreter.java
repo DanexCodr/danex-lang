@@ -300,7 +300,7 @@ public Void visitAssignStmt(AssignStmt stmt) {
     @Override
 public Void visitMethodDecl(MethodDecl methodDecl) {
     DanexFunction function = new DanexFunction(methodDecl, environment);
-    environment.define(methodDecl.name, function);
+    environment.define(methodDecl.name, environment);
     return null;
 }
 
