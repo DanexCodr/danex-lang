@@ -13,11 +13,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: List tools dir
-        run: |
-          echo "tools directory:"
-          ls -R tools
-
       - name: Set up Java
         uses: actions/setup-java@v3
         with:
@@ -25,32 +20,21 @@ jobs:
           java-version: '17'
 
       - name: Ensure src/danex directory exists
-        run: |
-          mkdir -p src/danex
+        run: mkdir -p src/danex
 
       - name: Compile AstBuilderGenerator
         run: |
           mkdir -p bin
-          javac -d bin tools/AstBuilderGenerator.java
+          javac -cp "lib/danex-parser.jar" -d bin tools/AstBuilderGenerator.java
 
       - name: Run AstBuilderGenerator
         run: |
-          java -cp bin tools.AstBuilderGenerator
+          java -cp "bin:lib/danex-parser.jar" tools.AstBuilderGenerator
 
       - name: Debug - list src/danex contents
         run: |
           echo "Contents of src/danex/:"
           ls -R src/danex || echo "src/danex/ not found"
-
-      - name: Confirm AstBuilder.java exists
-        run: |
-          if [ -f src/danex/AstBuilder.java ]; then
-            echo "✅ src/danex/AstBuilder.java exists"
-            head -n 20 src/danex/AstBuilder.java
-          else
-            echo "❌ src/danex/AstBuilder.java NOT found"
-            exit 1
-          fi
 
       - name: Compile generated AstBuilder
         run: |
@@ -64,3 +48,10 @@ jobs:
           git add src/danex/AstBuilder.java
           git commit -m "chore: Generate AstBuilder.java [skip ci]" || echo "No changes to commit"
           git push
+
+      - name: Cleanup workflow (optional self-delete)
+        run: |
+          rm .github/workflows/gen-astbuilder.yml
+          git add .github/workflows/gen-astbuilder.yml
+          git commit -m "chore: Remove self after generating AstBuilder [skip ci]" || echo "Nothing to commit"
+          git push || echo "Nothing to push"
