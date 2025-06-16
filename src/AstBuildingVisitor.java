@@ -1,220 +1,226 @@
 package danex;
 
-import danex.grammar.DanexParserBaseVisitor;
-import danex.grammar.DanexParser;
 import danex.ast.*;
-
-import org.antlr.v4.runtime.tree.ParseTree;
+import danex.parser.DanexParser;
+import danex.parser.DanexBaseVisitor;
 
 import java.util.*;
-import static java.util.stream.Collectors.toList;
+import static danex.TokenUtil.*;
 
-public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
-    private final AstBuilder builder;
+public class AstBuildingVisitor extends DanexBaseVisitor<Object> {
 
-    public AstBuildingVisitor(AstBuilder builder) {
-        this.builder = builder;
+    @Override
+    public Object visitCompilationUnit(DanexParser.CompilationUnitContext ctx) {
+        List<Stmt> statements = new ArrayList<>();
+        for (var stmtCtx : ctx.statement()) {
+            statements.add((Stmt) visit(stmtCtx));
+        }
+        return statements;
     }
 
-    public List<Stmt> build(DanexParser.CompilationUnitContext ctx) {
-        return ctx.statement().stream()
-            .map(stmt -> (Stmt) visit(stmt))
-            .collect(toList());
+    // ----------------------
+    // Statement Visitors
+    // ----------------------
+
+    @Override
+    public Object visitBlock(DanexParser.BlockContext ctx) {
+        List<Stmt> statements = new ArrayList<>();
+        for (var content : ctx.blockContent()) {
+            statements.add((Stmt) visit(content));
+        }
+        return new BlockStmt(statements);
     }
 
     @Override
-    public Object visitBlockStmt(DanexParser.BlockStmtContext ctx) {
-        List<Stmt> statements = ctx.statement().stream()
-            .map(s -> (Stmt) visit(s))
-            .collect(toList());
-        return builder.visitBlockStmt(new BlockStmt(statements));
-    }
-
-    @Override
-    public Object visitExprStmt(DanexParser.ExprStmtContext ctx) {
+    public Object visitExpressionStatement(DanexParser.ExpressionStatementContext ctx) {
         Expr expr = (Expr) visit(ctx.expression());
-        return builder.visitExprStmt(new ExprStmt(expr));
+        return new ExprStmt(expr);
     }
 
     @Override
-    public Object visitReturnStmt(DanexParser.ReturnStmtContext ctx) {
+    public Object visitReturnStatement(DanexParser.ReturnStatementContext ctx) {
+        Token keyword = convertToken(ctx.RETURN().getSymbol());
         Expr value = ctx.expression() != null ? (Expr) visit(ctx.expression()) : null;
-        return builder.visitReturnStmt(new ReturnStmt(value));
+        return new ReturnStmt(keyword, value);
     }
 
     @Override
-    public Object visitIfStmt(DanexParser.IfStmtContext ctx) {
+    public Object visitIfStatement(DanexParser.IfStatementContext ctx) {
         Expr condition = (Expr) visit(ctx.expression());
-        Stmt thenBranch = (Stmt) visit(ctx.thenBranch);
-        Stmt elseBranch = ctx.elseBranch != null ? (Stmt) visit(ctx.elseBranch) : null;
-        return builder.visitIfStmt(new IfStmt(condition, thenBranch, elseBranch));
+        Stmt thenBranch = (Stmt) visit(ctx.trueBranch);
+        Stmt elseBranch = ctx.falseBranch != null ? (Stmt) visit(ctx.falseBranch) : null;
+        return new IfStmt(condition, thenBranch, elseBranch);
     }
 
     @Override
-    public Object visitWhileStmt(DanexParser.WhileStmtContext ctx) {
+    public Object visitWhileStatement(DanexParser.WhileStatementContext ctx) {
         Expr condition = (Expr) visit(ctx.expression());
         Stmt body = (Stmt) visit(ctx.statement());
-        return builder.visitWhileStmt(new WhileStmt(condition, body));
+        return new WhileStmt(condition, body);
     }
 
     @Override
-    public Object visitDoWhileStmt(DanexParser.DoWhileStmtContext ctx) {
+    public Object visitDoWhileStatement(DanexParser.DoWhileStatementContext ctx) {
         Stmt body = (Stmt) visit(ctx.statement());
         Expr condition = (Expr) visit(ctx.expression());
-        return builder.visitDoWhileStmt(new DoWhileStmt(body, condition));
+        return new DoWhileStmt(condition, body);
     }
 
     @Override
-    public Object visitForStmt(DanexParser.ForStmtContext ctx) {
+    public Object visitForStatement(DanexParser.ForStatementContext ctx) {
         Stmt init = ctx.init != null ? (Stmt) visit(ctx.init) : null;
-        Expr condition = ctx.cond != null ? (Expr) visit(ctx.cond) : null;
-        Expr update = ctx.update != null ? (Expr) visit(ctx.update) : null;
+        Expr cond = ctx.condition != null ? (Expr) visit(ctx.condition) : null;
+        Expr step = ctx.step != null ? (Expr) visit(ctx.step) : null;
         Stmt body = (Stmt) visit(ctx.statement());
-        return builder.visitForStmt(new ForStmt(init, condition, update, body));
+        return new ForStmt(init, cond, step, body);
     }
 
     @Override
-    public Object visitExitStmt(DanexParser.ExitStmtContext ctx) {
-        return builder.visitExitStmt(new ExitStmt());
+    public Object visitExitStatement(DanexParser.ExitStatementContext ctx) {
+        Token keyword = convertToken(ctx.EXIT().getSymbol());
+        return new ExitStmt(keyword);
     }
 
     @Override
-    public Object visitMethodStmt(DanexParser.MethodStmtContext ctx) {
-        String name = ctx.IDENTIFIER().getText();
-        List<String> params = ctx.parameters() != null
-            ? ctx.parameters().IDENTIFIER().stream().map(ParseTree::getText).collect(toList())
-            : Collections.emptyList();
-        List<Stmt> body = ctx.block().statement().stream()
-            .map(s -> (Stmt) visit(s)).collect(toList());
-        return builder.visitMethodStmt(new MethodStmt(name, params, body));
+    public Object visitThrowStatement(DanexParser.ThrowStatementContext ctx) {
+        Expr expr = (Expr) visit(ctx.expression());
+        return new ThrowStmt(expr);
     }
 
     @Override
-    public Object visitClassStmt(DanexParser.ClassStmtContext ctx) {
-        String name = ctx.IDENTIFIER().getText();
-        List<Stmt> members = ctx.statement().stream()
-            .map(stmt -> (Stmt) visit(stmt)).collect(toList());
-        return builder.visitClassStmt(new ClassStmt(name, members));
+    public Object visitTryStatement(DanexParser.TryStatementContext ctx) {
+        Stmt tryBlock = (Stmt) visit(ctx.block());
+        List<CatchClause> catches = new ArrayList<>();
+        for (var c : ctx.catchClause()) {
+            Token name = convertToken(c.IDENTIFIER().getSymbol());
+            Stmt catchBlock = (Stmt) visit(c.block());
+            catches.add(new CatchClause(name, catchBlock));
+        }
+        Stmt finallyBlock = ctx.finallyBlock != null ? (Stmt) visit(ctx.finallyBlock.block()) : null;
+        return new TryStmt(tryBlock, catches, finallyBlock);
     }
 
     @Override
-    public Object visitThrowStmt(DanexParser.ThrowStmtContext ctx) {
-        Expr exception = (Expr) visit(ctx.expression());
-        return builder.visitThrowStmt(new ThrowStmt(exception));
+    public Object visitClassDecl(DanexParser.ClassDeclContext ctx) {
+        Token name = convertToken(ctx.IDENTIFIER().getSymbol());
+        List<Stmt> members = new ArrayList<>();
+        for (var member : ctx.classBody().classBodyMember()) {
+            members.add((Stmt) visit(member));
+        }
+        return new ClassStmt(name, members);
     }
 
     @Override
-    public Object visitTryStmt(DanexParser.TryStmtContext ctx) {
-        List<Stmt> tryBlock = ctx.tryBlock.statement().stream().map(s -> (Stmt) visit(s)).collect(toList());
-        String exceptionName = ctx.exception().IDENTIFIER().getText();
-        List<Stmt> catchBlock = ctx.catchBlock.statement().stream().map(s -> (Stmt) visit(s)).collect(toList());
-        List<Stmt> finallyBlock = ctx.finallyBlock != null
-            ? ctx.finallyBlock.statement().stream().map(s -> (Stmt) visit(s)).collect(toList())
-            : Collections.emptyList();
-        return builder.visitTryStmt(new TryStmt(tryBlock, exceptionName, catchBlock, finallyBlock));
+    public Object visitTopLevelMethodDecl(DanexParser.TopLevelMethodDeclContext ctx) {
+        return visit(ctx.methodDecl());
     }
 
     @Override
-    public Object visitImportStmt(DanexParser.ImportStmtContext ctx) {
-        String moduleName = ctx.moduleName.getText();
-        String alias = ctx.alias != null ? ctx.alias.getText() : null;
-        return builder.visitImportStmt(new ImportStmt(moduleName, alias));
+    public Object visitMethodDecl(DanexParser.MethodDeclContext ctx) {
+        Token name = convertToken(ctx.IDENTIFIER().getSymbol());
+        List<Param> params = new ArrayList<>();
+        if (ctx.paramList() != null) {
+            for (var paramCtx : ctx.paramList().param()) {
+                params.add(new Param(convertToken(paramCtx.IDENTIFIER().getSymbol())));
+            }
+        }
+        Stmt body = (Stmt) visit(ctx.methodBody());
+        return new MethodStmt(name, params, body);
+    }
+
+    // ----------------------
+    // Expression Visitors
+    // ----------------------
+
+    @Override
+    public Object visitLiteral(DanexParser.LiteralContext ctx) {
+        Token value = convertToken(ctx.getStart());
+        return new LiteralExpr(value);
     }
 
     @Override
-    public Object visitLiteralExpr(DanexParser.LiteralExprContext ctx) {
-        if (ctx.STRING() != null)
-            return builder.visitLiteralExpr(new LiteralExpr(ctx.STRING().getText()));
-        if (ctx.NUMBER() != null)
-            return builder.visitLiteralExpr(new LiteralExpr(Double.parseDouble(ctx.NUMBER().getText())));
-        if (ctx.BOOL() != null)
-            return builder.visitLiteralExpr(new LiteralExpr(Boolean.parseBoolean(ctx.BOOL().getText())));
-        return builder.visitLiteralExpr(new LiteralExpr(null)); // handles NULL case or fallback
-    }
-
-    @Override
-    public Object visitVariableExpr(DanexParser.VariableExprContext ctx) {
-        return builder.visitVariableExpr(new VariableExpr(ctx.IDENTIFIER().getText()));
-    }
-
-    @Override
-    public Object visitAssignExpr(DanexParser.AssignExprContext ctx) {
-        String name = ctx.IDENTIFIER().getText();
+    public Object visitAssignment(DanexParser.AssignmentContext ctx) {
+        Expr target = (Expr) visit(ctx.primaryExpr());
         Expr value = (Expr) visit(ctx.expression());
-        return builder.visitAssignExpr(new AssignExpr(name, value));
+        return new AssignExpr(target, value);
     }
 
     @Override
-    public Object visitBinaryExpr(DanexParser.BinaryExprContext ctx) {
-        Expr left = (Expr) visit(ctx.left);
-        String operator = ctx.op.getText();
-        Expr right = (Expr) visit(ctx.right);
-        return builder.visitBinaryExpr(new BinaryExpr(left, operator, right));
+    public Object visitLogicalOrExpr(DanexParser.LogicalOrExprContext ctx) {
+        return buildBinaryExpr(ctx.expression(), ctx.OR().getSymbol(), ctx.logicalAndExpr());
+    }
+
+    @Override
+    public Object visitLogicalAndExpr(DanexParser.LogicalAndExprContext ctx) {
+        return buildBinaryExpr(ctx.expression(), ctx.AND().getSymbol(), ctx.nullCoalesceExpr());
+    }
+
+    @Override
+    public Object visitComparisonExpr(DanexParser.ComparisonExprContext ctx) {
+        return buildBinaryExpr(ctx.left, ctx.op.getSymbol(), ctx.right);
+    }
+
+    @Override
+    public Object visitAdditiveExpr(DanexParser.AdditiveExprContext ctx) {
+        return buildBinaryExpr(ctx.left, ctx.op.getSymbol(), ctx.right);
+    }
+
+    @Override
+    public Object visitMultiplicativeExpr(DanexParser.MultiplicativeExprContext ctx) {
+        return buildBinaryExpr(ctx.left, ctx.op.getSymbol(), ctx.right);
     }
 
     @Override
     public Object visitUnaryExpr(DanexParser.UnaryExprContext ctx) {
-        String operator = ctx.op.getText();
-        Expr right = (Expr) visit(ctx.expression());
-        return builder.visitUnaryExpr(new UnaryExpr(operator, right));
+        Token operator = convertToken(ctx.op.getSymbol());
+        Expr right = (Expr) visit(ctx.unaryExpr());
+        return new UnaryExpr(operator, right);
     }
 
     @Override
-    public Object visitCallExpr(DanexParser.CallExprContext ctx) {
-        Expr callee = (Expr) visit(ctx.expression());
-        List<Expr> args = ctx.arguments() != null
-            ? ctx.arguments().expression().stream().map(e -> (Expr) visit(e)).collect(toList())
-            : Collections.emptyList();
-        return builder.visitCallExpr(new CallExpr(callee, args));
-    }
-
-    @Override
-    public Object visitGroupingExpr(DanexParser.GroupingExprContext ctx) {
-        return builder.visitGroupingExpr(new GroupingExpr((Expr) visit(ctx.expression())));
-    }
-
-    @Override
-    public Object visitLambdaExpr(DanexParser.LambdaExprContext ctx) {
-        List<String> params = ctx.parameters() != null
-            ? ctx.parameters().IDENTIFIER().stream().map(ParseTree::getText).collect(toList())
-            : Collections.emptyList();
-        Expr body = (Expr) visit(ctx.expression());
-        return builder.visitLambdaExpr(new LambdaExpr(params, body));
-    }
-
-    @Override
-    public Object visitNullCoalesceExpr(DanexParser.NullCoalesceExprContext ctx) {
-        Expr left = (Expr) visit(ctx.left);
-        Expr right = (Expr) visit(ctx.right);
-        return builder.visitNullCoalesceExpr(new NullCoalesceExpr(left, right));
-    }
-
-    @Override
-    public Object visitTryExpr(DanexParser.TryExprContext ctx) {
-        Expr tryBody = (Expr) visit(ctx.tryBody);
-        String exceptionName = ctx.exception().IDENTIFIER().getText();
-        Expr catchBody = (Expr) visit(ctx.catchBody);
-        Expr finallyBody = ctx.finallyBody != null ? (Expr) visit(ctx.finallyBody) : null;
-        return builder.visitTryExpr(new TryExpr(tryBody, exceptionName, catchBody, finallyBody));
-    }
-
-    @Override
-    public Object visitAwaitExpr(DanexParser.AwaitExprContext ctx) {
-        Expr expr = (Expr) visit(ctx.expression());
-        return builder.visitAwaitExpr(new AwaitExpr(expr));
-    }
-
-    @Override
-    public Object visitDoExpr(DanexParser.DoExprContext ctx) {
-        List<Stmt> body = ctx.statement().stream()
-            .map(stmt -> (Stmt) visit(stmt)).collect(toList());
-        return builder.visitDoExpr(new DoExpr(body));
-    }
-
-    @Override
-    public Object visitComparatorExpr(DanexParser.ComparatorExprContext ctx) {
-        Expr left = (Expr) visit(ctx.left);
-        Expr right = (Expr) visit(ctx.right);
-        return builder.visitComparatorExpr(new ComparatorExpr(left, right));
-    }
+    public Object visitFunctionCall(DanexParser.FunctionCallContext ctx) {
+        Expr callee = (Expr) visit(ctx.primaryExpr());
+        List<Expr> args = new ArrayList<>();
+        if (ctx.arguments() != null) {
+            for (var arg : ctx.arguments().expression()) {
+                args.add((Expr) visit(arg));
             }
+        }
+        return new CallExpr(callee, args);
+    }
+
+    @Override
+    public Object visitPrimaryExpr(DanexParser.PrimaryExprContext ctx) {
+        if (ctx.IDENTIFIER() != null) {
+            return new VariableExpr(convertToken(ctx.IDENTIFIER().getSymbol()));
+        } else if (ctx.literal() != null) {
+            return visit(ctx.literal());
+        } else if (ctx.expression() != null) {
+            return visit(ctx.expression());
+        }
+        throw new RuntimeException("Unknown primary expression: " + ctx.getText());
+    }
+
+    @Override
+    public Object visitTryExpression(DanexParser.TryExpressionContext ctx) {
+        Expr expr = (Expr) visit(ctx.expression());
+        return new TryExpr(expr);
+    }
+
+    @Override
+    public Object visitDoExpression(DanexParser.DoExpressionContext ctx) {
+        Stmt body = (Stmt) visit(ctx.block());
+        return new DoExpr(body);
+    }
+
+    // ----------------------
+    // Utility
+    // ----------------------
+
+    private Expr buildBinaryExpr(Object leftNode, org.antlr.v4.runtime.Token opToken, Object rightNode) {
+        Expr left = (Expr) visit(leftNode);
+        Token operator = convertToken(opToken);
+        Expr right = (Expr) visit(rightNode);
+        return new BinaryExpr(left, operator, right);
+    }
+    }
