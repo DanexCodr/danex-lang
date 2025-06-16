@@ -1,3 +1,5 @@
 sayHello(String name) {
     print("Hello, " + name + "!");
 }
+
+sayHello("Danex");
