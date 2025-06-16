@@ -179,6 +179,76 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         return builder.visitMethodDecl(methodNode);
     }
 
+  /**
+     * Helper for MethodDeclContext.
+     */
+    private Decl buildMethod(DanexParser.MethodDeclContext ctx) {
+        // Annotations
+        List<Annotation> annotations = new ArrayList<>();
+        for (var annCtx : ctx.annotation()) {
+            Object annObj = visit(annCtx);
+            if (annObj instanceof Annotation) {
+                annotations.add((Annotation) annObj);
+            }
+        }
+        // Modifiers
+        List<String> modifiers = new ArrayList<>();
+        for (var m : ctx.modifier()) {
+            modifiers.add(m.getText());
+        }
+        // Name
+        String name = ctx.IDENTIFIER().getText();
+        // Result declaration
+        String resultType = null;
+        String resultName = null;
+        if (ctx.resultDecl() != null) {
+            resultType = ctx.resultDecl().type().getText();
+            if (ctx.resultDecl().IDENTIFIER() != null) {
+                resultName = ctx.resultDecl().IDENTIFIER().getText();
+            }
+        }
+        // Parameters
+        List<Param> params = new ArrayList<>();
+        if (ctx.paramList() != null) {
+            for (var pCtx : ctx.paramList().param()) {
+                String pType = pCtx.type().getText();
+                String pName;
+                boolean varargs = false;
+                if (pCtx.VARARGS() != null) {
+                    varargs = true;
+                    pName = pCtx.IDENTIFIER().getText();
+                } else {
+                    pName = pCtx.IDENTIFIER().getText();
+                }
+                Param paramNode = new Param(pType, pName, varargs);
+                paramNode = (Param) builder.visitParam(paramNode);
+                params.add(paramNode);
+            }
+        }
+        // Body
+        Stmt bodyStmt;
+        if (ctx.methodBody().block() != null) {
+            Object bObj = visit(ctx.methodBody().block());
+            if (!(bObj instanceof Stmt)) {
+                throw new RuntimeException("Expected Stmt from block, got: " + bObj);
+            }
+            bodyStmt = (Stmt) bObj;
+        } else {
+            Expr expr = (Expr) visit(ctx.methodBody().expression());
+            String targetName = (resultName != null) ? resultName : name;
+            AssignExpr assign = new AssignExpr(targetName, expr);
+            assign = (AssignExpr) builder.visitAssignExpr(assign);
+            ExprStmt exprStmt = new ExprStmt(assign);
+            exprStmt = (ExprStmt) builder.visitExprStmt(exprStmt);
+            List<Stmt> stmts = new ArrayList<>();
+            stmts.add(exprStmt);
+            BlockStmt block = new BlockStmt(stmts);
+            bodyStmt = (BlockStmt) builder.visitBlockStmt(block);
+        }
+        MethodDecl methodNode = new MethodDecl(name, resultType, resultName, annotations, modifiers, params, bodyStmt);
+        return builder.visitMethodDecl(methodNode);
+    }
+    
     // -------------------
     // Blocks
     // -------------------
