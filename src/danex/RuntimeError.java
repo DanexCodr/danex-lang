@@ -1,7 +1,7 @@
 package danex;
 
 public class RuntimeError extends Exception {
-    public RuntimeException(String message) {
+    public RuntimeError(String message) {
         super(message);
     }
 }
