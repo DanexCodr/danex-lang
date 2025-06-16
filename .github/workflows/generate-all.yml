@@ -49,17 +49,16 @@ jobs:
       - name: Generate ANTLR Lexer & Parser for local use
         run: |
           mkdir -p src/generated bin/parser-bin
-          # Lexer
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -o src/generated \
             -package danex.antlr \
             grammar/DanexLexer.g4
-          # Copy tokens if generated
+
           if [ -f src/generated/grammar/DanexLexer.tokens ]; then
             cp src/generated/grammar/DanexLexer.tokens src/generated/
           fi
-          # Parser
+
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -o src/generated \
@@ -75,7 +74,6 @@ jobs:
             exit 1
           fi
           javac -cp lib/antlr-4.9.2-complete.jar -d bin/parser-bin @parser-sources.txt
-          # Package to a local JAR for classpath
           jar cf parser.jar -C bin/parser-bin .
 
       - name: Generate AST Classes
@@ -108,26 +106,25 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Ensure a clean index: unstage any stale changes
-          git reset
+          # Step 1: Make sure working tree is on latest main
+          git fetch origin main
+          git rebase origin/main
 
-          # Stage only the generated files
+          # Step 2: Clean index and working directory just in case
+          git reset
+          git checkout -- .
+
+          # Step 3: Stage only the generated files
           git add src/danex/ast src/danex/AstBuilder.java src/danex/Interpreter.java
 
-          # If nothing changed, skip commit
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
             exit 0
           fi
 
-          # Rebase onto latest main before committing
-          git fetch origin main
-          git rebase origin/main
-
-          # Single commit for all generated changes
+          # Step 4: Commit and push
           git commit -m "chore: regenerate AST, AstBuilder, Interpreter [skip ci]"
 
-          # Push with retry logic
           max_attempts=3; attempt=1
           until git push origin HEAD:main; do
             if [ $attempt -ge $max_attempts ]; then
