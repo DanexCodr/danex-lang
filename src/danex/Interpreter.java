@@ -239,14 +239,6 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
     }
 
     @Override
-    public Void visitReturnStmt(ReturnStmt returnStmt) {
-        Object value = null;
-        if (returnStmt.value != null) value = evaluate(returnStmt.value);
-        throw new Return(value);
-        return null;
-    }
-
-    @Override
     public Void visitThrowStmt(ThrowStmt throwStmt) {
         Object ex = evaluate(throwStmt.exception);
         throw new RuntimeError(toStr(ex));
