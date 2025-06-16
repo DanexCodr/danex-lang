@@ -14,7 +14,7 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
 
     @Override
     public Expr visitAwaitExpr(AwaitExpr awaitExpr) {
-        Expr expression = awaitExpr.expression;
+        Expr expression = awaitExpr.expression.accept(this);
         return new AwaitExpr(expression);
     }
 
@@ -26,7 +26,7 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
         List<Annotation> annotations = methodDecl.annotations;
         List<String> modifiers = methodDecl.modifiers;
         List<Param> params = methodDecl.params;
-        Stmt body = methodDecl.body;
+        Stmt body = methodDecl.body.accept(this);
         return new MethodDecl(name, resultType, resultName, annotations, modifiers, params, body);
     }
 
@@ -42,38 +42,38 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
 
     @Override
     public Expr visitNullCoalesceExpr(NullCoalesceExpr nullCoalesceExpr) {
-        Expr left = nullCoalesceExpr.left;
-        Expr right = nullCoalesceExpr.right;
+        Expr left = nullCoalesceExpr.left.accept(this);
+        Expr right = nullCoalesceExpr.right.accept(this);
         return new NullCoalesceExpr(left, right);
     }
 
     @Override
     public Stmt visitAssignStmt(AssignStmt assignStmt) {
-        Expr target = assignStmt.target;
-        Expr value = assignStmt.value;
+        Expr target = assignStmt.target.accept(this);
+        Expr value = assignStmt.value.accept(this);
         return new AssignStmt(target, value);
     }
 
     @Override
     public Expr visitCallExpr(CallExpr callExpr) {
-        Expr callee = callExpr.callee;
+        Expr callee = callExpr.callee.accept(this);
         List<Expr> arguments = callExpr.arguments;
         return new CallExpr(callee, arguments);
     }
 
     @Override
     public Stmt visitForStmt(ForStmt forStmt) {
-        Stmt init = forStmt.init;
-        Expr condition = forStmt.condition;
-        Expr update = forStmt.update;
-        Stmt body = forStmt.body;
+        Stmt init = forStmt.init.accept(this);
+        Expr condition = forStmt.condition.accept(this);
+        Expr update = forStmt.update.accept(this);
+        Stmt body = forStmt.body.accept(this);
         return new ForStmt(init, condition, update, body);
     }
 
     @Override
     public Expr visitComparatorExpr(ComparatorExpr comparatorExpr) {
-        Expr left = comparatorExpr.left;
-        Expr right = comparatorExpr.right;
+        Expr left = comparatorExpr.left.accept(this);
+        Expr right = comparatorExpr.right.accept(this);
         return new ComparatorExpr(left, right);
     }
 
@@ -85,15 +85,15 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
 
     @Override
     public Stmt visitWhileStmt(WhileStmt whileStmt) {
-        Expr condition = whileStmt.condition;
-        Stmt body = whileStmt.body;
+        Expr condition = whileStmt.condition.accept(this);
+        Stmt body = whileStmt.body.accept(this);
         return new WhileStmt(condition, body);
     }
 
     @Override
     public Stmt visitDoWhileStmt(DoWhileStmt doWhileStmt) {
-        Stmt body = doWhileStmt.body;
-        Expr condition = doWhileStmt.condition;
+        Stmt body = doWhileStmt.body.accept(this);
+        Expr condition = doWhileStmt.condition.accept(this);
         return new DoWhileStmt(body, condition);
     }
 
@@ -106,7 +106,7 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
     @Override
     public Expr visitAssignExpr(AssignExpr assignExpr) {
         String name = assignExpr.name;
-        Expr value = assignExpr.value;
+        Expr value = assignExpr.value.accept(this);
         return new AssignExpr(name, value);
     }
 
@@ -121,16 +121,10 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
 
     @Override
     public Expr visitBinaryExpr(BinaryExpr binaryExpr) {
-        Expr left = binaryExpr.left;
+        Expr left = binaryExpr.left.accept(this);
         String operator = binaryExpr.operator;
-        Expr right = binaryExpr.right;
+        Expr right = binaryExpr.right.accept(this);
         return new BinaryExpr(left, operator, right);
-    }
-
-    @Override
-    public Stmt visitReturnStmt(ReturnStmt returnStmt) {
-        Expr value = returnStmt.value;
-        return new ReturnStmt(value);
     }
 
     @Override
@@ -141,7 +135,7 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
 
     @Override
     public Expr visitGroupingExpr(GroupingExpr groupingExpr) {
-        Expr expression = groupingExpr.expression;
+        Expr expression = groupingExpr.expression.accept(this);
         return new GroupingExpr(expression);
     }
 
@@ -169,29 +163,29 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
 
     @Override
     public Stmt visitIfStmt(IfStmt ifStmt) {
-        Expr condition = ifStmt.condition;
-        Stmt thenBranch = ifStmt.thenBranch;
-        Stmt elseBranch = ifStmt.elseBranch;
+        Expr condition = ifStmt.condition.accept(this);
+        Stmt thenBranch = ifStmt.thenBranch.accept(this);
+        Stmt elseBranch = ifStmt.elseBranch.accept(this);
         return new IfStmt(condition, thenBranch, elseBranch);
     }
 
     @Override
     public Expr visitLambdaExpr(LambdaExpr lambdaExpr) {
         List<Param> params = lambdaExpr.params;
-        Expr body = lambdaExpr.body;
+        Expr body = lambdaExpr.body.accept(this);
         return new LambdaExpr(params, body);
     }
 
     @Override
     public Expr visitUnaryExpr(UnaryExpr unaryExpr) {
         String operator = unaryExpr.operator;
-        Expr right = unaryExpr.right;
+        Expr right = unaryExpr.right.accept(this);
         return new UnaryExpr(operator, right);
     }
 
     @Override
     public Stmt visitThrowStmt(ThrowStmt throwStmt) {
-        Expr exception = throwStmt.exception;
+        Expr exception = throwStmt.exception.accept(this);
         return new ThrowStmt(exception);
     }
 
@@ -218,12 +212,5 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
         Expr e = stmt.expression.accept(this);
         return new ExprStmt(e);
     }
-
-    // If your AST uses ExpressionStmt instead of ExprStmt, you can add:
-    // @Override
-    // public ExpressionStmt visitExpressionStmt(ExpressionStmt stmt) {
-    //     Expr e = stmt.expression.accept(this);
-    //     return new ExpressionStmt(e);
-    // }
 
 }
