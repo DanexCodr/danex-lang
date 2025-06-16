@@ -43,6 +43,9 @@ jobs:
           echo "Checking for DanexLexer.tokens:"
           find . -name "DanexLexer.tokens"
 
+          echo "Copying DanexLexer.tokens to grammar/..."
+          cp src/danex/parser/grammar/DanexLexer.tokens grammar/
+
           echo "Generating DanexParser..."
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
@@ -52,10 +55,10 @@ jobs:
             -lib grammar \
             grammar/DanexParser.g4
 
-          echo "Removing DanexLexer.tokens..."
-          rm -f DanexLexer.tokens
+          echo "Removing copied tokens..."
+          rm -f grammar/DanexLexer.tokens
 
       - name: Confirm generated files
         run: |
-          echo "Files generated:"
+          echo "Generated files:"
           find src/danex/parser -type f
