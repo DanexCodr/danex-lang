@@ -12,9 +12,6 @@ public abstract class Stmt extends ASTNode {
         R visitThrowStmt(ThrowStmt throwStmt);
         R visitExitStmt(ExitStmt exitStmt);
         R visitTryStmt(TryStmt tryStmt);
-        R visitClassStmt(ClassStmt classStmt);
-        R visitMethodStmt(MethodStmt methodStmt);
-        R visitImportStmt(ImportStmt importStmt);
     }
 
     public abstract <R> R accept(Visitor<R> visitor);
