@@ -55,14 +55,6 @@ jobs:
             -package danex.antlr \
             grammar/DanexLexer.g4
 
-          # Move tokens file (ANTLR writes this to grammar/ by default)
-          if [ -f grammar/DanexLexer.tokens ]; then
-            cp grammar/DanexLexer.tokens src/generated/
-          else
-            echo "❌ DanexLexer.tokens NOT FOUND in grammar/"
-            exit 1
-          fi
-
           # Generate Parser (now with tokens available)
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
