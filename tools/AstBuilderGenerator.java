@@ -44,7 +44,8 @@ public class AstBuilderGenerator {
             sb.append("public class AstBuilder implements Expr.Visitor<Object>, Stmt.Visitor<Object> {\n\n");
 
             for (AstClass cls : astClasses) {
-                sb.append(generateVisitorMethod(cls)).append("\n");
+    if (cls.className.equals("Expr") || cls.className.equals("Stmt")) continue;
+    sb.append(generateVisitorMethod(cls)).append("\n");
             }
 
             sb.append("}\n");
