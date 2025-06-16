@@ -653,28 +653,5 @@ private Stmt buildMethodBody(String methodName, String resultName, DanexParser.M
     public Object visitType(DanexParser.TypeContext ctx) {
         return ctx.getText();
     }
-
-@Override
-public Decl visitArrowFunctionDecl(DanexParser.ArrowFunctionDeclContext ctx) {
-    String name = ctx.IDENTIFIER().getText();
-    List<Param> params = extractParams(ctx.paramList()); // assumes you implemented this helper
-    Expr expr = visit(ctx.expression());
-
-    // Simulate return: methodName = expr;
-    Expr returnExpr = new AssignExpr(name, expr);
-    Stmt body = new ExprStmt(returnExpr); // wrap in ExprStmt
-
-    // Construct MethodDecl with dummy metadata
-    return new MethodDecl(
-        name,                 // method name
-        "auto",               // result type (placeholder or inferred)
-        name,                 // result variable name
-        new ArrayList<>(),    // annotations
-        new ArrayList<>(),    // modifiers
-        params,
-        body
-    );
-}
-    
     // Other rules omitted for brevity; add as needed.
             }
