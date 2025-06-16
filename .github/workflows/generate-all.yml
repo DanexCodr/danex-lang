@@ -1,14 +1,7 @@
 name: Generate AST, AstBuilder, Interpreter
 
 on:
-  push:
-    paths:
-      - 'grammar/**'
-      - 'tools/AstGenerator.java'
-      - 'tools/AstBuilderGenerator.java'
-      - 'tools/InterpreterTemplateGenerator.java'
-      - '.github/workflows/generate-all.yml'
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
