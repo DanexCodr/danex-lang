@@ -39,17 +39,32 @@ jobs:
           if [ ! -f lib/antlr-4.9.2-complete.jar ]; then
             echo "Downloading ANTLR runtime..."
             curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
+          else
+            echo "Using cached ANTLR runtime."
           fi
 
-      - name: Generate ANTLR Lexer & Parser (with visitor support)
+      - name: Generate ANTLR Lexer (first stage)
         run: |
           mkdir -p src/generated
+
+          java -jar lib/antlr-4.9.2-complete.jar \
+            -Dlanguage=Java \
+            -package danex.antlr \
+            -o src/generated \
+            grammar/DanexLexer.g4
+
+          # Move .tokens where parser can find it
+          mv DanexLexer.tokens grammar/
+
+      - name: Generate ANTLR Parser (with visitor support)
+        run: |
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -visitor \
             -package danex.antlr \
             -o src/generated \
-            grammar/DanexLexer.g4 grammar/DanexParser.g4
+            -lib grammar \
+            grammar/DanexParser.g4
 
       - name: Compile ANTLR-generated sources
         run: |
@@ -58,6 +73,7 @@ jobs:
             echo "❌ No ANTLR-generated Java files found."
             exit 1
           fi
+          mkdir -p bin
           javac -cp lib/antlr-4.9.2-complete.jar -d bin @sources.txt
 
       - name: Package parser JAR artifact
