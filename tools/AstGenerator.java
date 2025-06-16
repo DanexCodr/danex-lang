@@ -1,3 +1,4 @@
+// === AstGenerator.java ===
 package tools;
 
 import java.io.BufferedWriter;
@@ -33,13 +34,13 @@ public class AstGenerator {
             new NodeDef("VariableExpr", Arrays.asList("String name")),
             new NodeDef("AssignExpr", Arrays.asList("String name", "Expr value")),
             new NodeDef("CallExpr", Arrays.asList("Expr callee", "List<Expr> arguments")),
-            new NodeDef("LambdaExpr", Arrays.asList("List<String> params", "Expr body")),
+            new NodeDef("LambdaExpr", Arrays.asList("List<Param> params", "Expr body")),
             new NodeDef("DoExpr", Arrays.asList("List<Stmt> body")),
-            // TryExpr: include catch type/name and finally block
+            // TryExpr: no resources in expression context
             new NodeDef("TryExpr", Arrays.asList(
                 "List<Stmt> tryBlock",
-                "String catchType",       // e.g., exception class/type name
-                "String catchName",       // variable name for caught exception
+                "String catchType",
+                "String catchName",
                 "List<Stmt> catchBlock",
                 "List<Stmt> finallyBlock"
             )),
@@ -62,8 +63,9 @@ public class AstGenerator {
             new NodeDef("ReturnStmt", Arrays.asList("Expr value")),
             new NodeDef("ThrowStmt", Arrays.asList("Expr exception")),
             new NodeDef("ExitStmt", Collections.emptyList()),
-            // TryStmt: include catch type/name and finally block
+            // TryStmt: include resources, catch, finally
             new NodeDef("TryStmt", Arrays.asList(
+                "List<ResourceDecl> resources",
                 "List<Stmt> tryBlock",
                 "String catchType",
                 "String catchName",
@@ -80,26 +82,28 @@ public class AstGenerator {
             // MethodDecl: name, return type, optional result variable name, annotations, modifiers, params, and body
             new NodeDef("MethodDecl", Arrays.asList(
                 "String name",
-                "String resultType",     // e.g., "Int", or null if none
-                "String resultName",     // variable name for result; may be null to indicate use method name as return var
+                "String resultType",
+                "String resultName",
                 "List<Annotation> annotations",
                 "List<String> modifiers",
                 "List<Param> params",
-                "Stmt body"              // block statement or a wrapped statement for arrow-form
+                "Stmt body"
             )),
             // ClassDecl: nested declarations inside a class
             new NodeDef("ClassDecl", Arrays.asList(
                 "String name",
                 "List<Annotation> annotations",
                 "List<String> modifiers",
-                "List<Decl> members"     // declarations inside class
+                "List<Decl> members"
             )),
-            // ImportDecl: moduleName, alias (alias may be null)
+            // ImportDecl: moduleName, alias
             new NodeDef("ImportDecl", Arrays.asList("String moduleName", "String alias")),
             // Annotation node
             new NodeDef("Annotation", Arrays.asList("String name")),
             // Param node: type, name, varargs flag
-            new NodeDef("Param", Arrays.asList("String type", "String name", "boolean varargs"))
+            new NodeDef("Param", Arrays.asList("String type", "String name", "boolean varargs")),
+            // ResourceDecl node
+            new NodeDef("ResourceDecl", Arrays.asList("String type", "String name", "Expr initializer"))
         );
         for (NodeDef nd : declNodes) {
             generateDeclSubclass(nd);
@@ -134,7 +138,6 @@ public class AstGenerator {
         String pkg = "danex.ast";
         String className = "Expr";
         Path file = Paths.get(OUTPUT_DIR, className + ".java");
-        // Collect concrete expr class names; you can keep this in sync manually or derive dynamically later
         String[] concreteExprs = {
             "BinaryExpr","UnaryExpr","LiteralExpr","GroupingExpr","VariableExpr","AssignExpr",
             "CallExpr","LambdaExpr","DoExpr","TryExpr","AwaitExpr","NullCoalesceExpr","ComparatorExpr"
@@ -142,13 +145,11 @@ public class AstGenerator {
         try (BufferedWriter w = Files.newBufferedWriter(file)) {
             w.write("package " + pkg + ";"); w.newLine(); w.newLine();
             w.write("public abstract class " + className + " extends ASTNode {"); w.newLine();
-            // Visitor interface
             w.write("    public interface Visitor<R> {"); w.newLine();
             for (String ce : concreteExprs) {
                 w.write("        R visit" + ce + "(" + ce + " " + decap(ce) + ");"); w.newLine();
             }
             w.write("    }"); w.newLine(); w.newLine();
-            // accept method
             w.write("    public abstract <R> R accept(Visitor<R> visitor);"); w.newLine();
             w.write("}"); w.newLine();
         }
@@ -165,7 +166,6 @@ public class AstGenerator {
         try (BufferedWriter w = Files.newBufferedWriter(file)) {
             w.write("package " + pkg + ";"); w.newLine(); w.newLine();
             w.write("public abstract class " + className + " extends ASTNode {"); w.newLine();
-            // Visitor interface
             w.write("    public interface Visitor<R> {"); w.newLine();
             for (String cs : concreteStmts) {
                 w.write("        R visit" + cs + "(" + cs + " " + decap(cs) + ");"); w.newLine();
@@ -183,18 +183,13 @@ public class AstGenerator {
         try (BufferedWriter w = Files.newBufferedWriter(file)) {
             w.write("package " + pkg + ";"); w.newLine(); w.newLine();
             w.write("public abstract class " + className + " extends ASTNode {"); w.newLine();
-            w.write("    public interface Visitor<R> {");
-            w.newLine();
-            w.write("        R visitMethodDecl(MethodDecl methodDecl);");
-            w.newLine();
-            w.write("        R visitClassDecl(ClassDecl classDecl);");
-            w.newLine();
-            w.write("        R visitImportDecl(ImportDecl importDecl);");
-            w.newLine();
-            w.write("        R visitAnnotation(Annotation annotation);");
-            w.newLine();
-            w.write("        R visitParam(Param param);");
-            w.newLine();
+            w.write("    public interface Visitor<R> {"); w.newLine();
+            w.write("        R visitMethodDecl(MethodDecl methodDecl);"); w.newLine();
+            w.write("        R visitClassDecl(ClassDecl classDecl);"); w.newLine();
+            w.write("        R visitImportDecl(ImportDecl importDecl);"); w.newLine();
+            w.write("        R visitAnnotation(Annotation annotation);"); w.newLine();
+            w.write("        R visitParam(Param param);"); w.newLine();
+            w.write("        R visitResourceDecl(ResourceDecl resourceDecl);"); w.newLine();
             w.write("    }"); w.newLine(); w.newLine();
             w.write("    public abstract <R> R accept(Visitor<R> visitor);"); w.newLine();
             w.write("}"); w.newLine();
@@ -274,8 +269,7 @@ public class AstGenerator {
         Path file = Paths.get(OUTPUT_DIR, nd.className + ".java");
         try (BufferedWriter w = Files.newBufferedWriter(file)) {
             w.write("package " + pkg + ";"); w.newLine(); w.newLine();
-            w.write("import java.util.*;");
-            w.newLine();
+            w.write("import java.util.*;"); w.newLine();
             w.write("public class " + nd.className + " extends Decl {"); w.newLine();
             // Fields
             for (String field : nd.fields) {
@@ -308,4 +302,4 @@ public class AstGenerator {
         if (s == null || s.isEmpty()) return s;
         return Character.toLowerCase(s.charAt(0)) + s.substring(1);
     }
-            }
+}
