@@ -31,13 +31,13 @@ jobs:
 
       - name: Generate ANTLR lexer and parser to src/danex/parser
         run: |
-          mkdir -p src/danex/parser
+          mkdir -p src/
 
           echo "Generating DanexLexer..."
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -package danex.parser \
-            -o src/danex/parser \
+            -o src/ \
             grammar/DanexLexer.g4
 
           echo "Checking for DanexLexer.tokens:"
@@ -51,7 +51,7 @@ jobs:
             -Dlanguage=Java \
             -visitor \
             -package danex.parser \
-            -o src/danex/parser \
+            -o src/ \
             -lib grammar \
             grammar/DanexParser.g4
 
