@@ -1,11 +1,13 @@
-// src/Main.java 
-import org.antlr.v4.runtime.*;
-import org.antlr.v4.runtime.tree.*;
+// File: src/danex/Main.java
+package danex;
+
+import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTree;
 
 import danex.grammar.DanexLexer;
 import danex.grammar.DanexParser;
-import danex.AstBuilder;
-import danex.Interpreter;
 import danex.ast.Decl;
 
 import java.io.FileInputStream;
@@ -28,7 +30,7 @@ public class Main {
 
         ParseTree tree = parser.compilationUnit();
 
-        // Step 2: Build AST
+        // Step 2: Build AST Declarations
         AstBuilder builder = new AstBuilder();
         AstBuildingVisitor visitor = new AstBuildingVisitor(builder);
         @SuppressWarnings("unchecked")
@@ -38,7 +40,6 @@ public class Main {
         Interpreter interpreter = new Interpreter();
         interpreter.interpretDecls(programDecls);
 
-        // If your language allows top-level statements (grammar does not), you could also:
-        // interpreter.interpret(statements);
+        // If your language also supports top-level statements, you could handle them similarly.
     }
 }
