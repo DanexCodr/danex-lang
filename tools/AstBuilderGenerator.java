@@ -18,7 +18,7 @@ public class AstBuilderGenerator {
         "Annotation",
         "Param",
         "ResourceDecl",
-        "ExprStmt",
+        "ExprStmt"
     );
 
     public static void main(String[] args) {
