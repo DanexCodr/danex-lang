@@ -15,7 +15,7 @@ public class ClassDecl extends Decl {
     }
 
     @Override
-    public <R> R accept(Visitor<R> visitor) {
+    public <R> R accept(Decl.Visitor<R> visitor) {
         return visitor.visitClassDecl(this);
     }
 }

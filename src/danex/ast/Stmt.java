@@ -8,7 +8,7 @@ public abstract class Stmt extends ASTNode {
         R visitWhileStmt(WhileStmt whileStmt);
         R visitDoWhileStmt(DoWhileStmt doWhileStmt);
         R visitForStmt(ForStmt forStmt);
-        R visitReturnStmt(ReturnStmt returnStmt);
+        R visitAssignStmt(AssignStmt assignStmt);
         R visitThrowStmt(ThrowStmt throwStmt);
         R visitExitStmt(ExitStmt exitStmt);
         R visitTryStmt(TryStmt tryStmt);

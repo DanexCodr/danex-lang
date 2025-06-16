@@ -11,7 +11,7 @@ public class WhileStmt extends Stmt {
     }
 
     @Override
-    public <R> R accept(Visitor<R> visitor) {
+    public <R> R accept(Stmt.Visitor<R> visitor) {
         return visitor.visitWhileStmt(this);
     }
 }

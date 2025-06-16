@@ -9,7 +9,7 @@ public class AwaitExpr extends Expr {
     }
 
     @Override
-    public <R> R accept(Visitor<R> visitor) {
+    public <R> R accept(Expr.Visitor<R> visitor) {
         return visitor.visitAwaitExpr(this);
     }
 }

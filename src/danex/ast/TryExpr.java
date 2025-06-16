@@ -17,7 +17,7 @@ public class TryExpr extends Expr {
     }
 
     @Override
-    public <R> R accept(Visitor<R> visitor) {
+    public <R> R accept(Expr.Visitor<R> visitor) {
         return visitor.visitTryExpr(this);
     }
 }

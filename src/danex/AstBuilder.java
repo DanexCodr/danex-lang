@@ -48,6 +48,13 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
     }
 
     @Override
+    public Stmt visitAssignStmt(AssignStmt assignStmt) {
+        Expr target = assignStmt.target;
+        Expr value = assignStmt.value;
+        return new AssignStmt(target, value);
+    }
+
+    @Override
     public Expr visitCallExpr(CallExpr callExpr) {
         Expr callee = callExpr.callee;
         List<Expr> arguments = callExpr.arguments;

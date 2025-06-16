@@ -9,7 +9,7 @@ public class ExprStmt extends Stmt {
     }
 
     @Override
-    public <R> R accept(Visitor<R> visitor) {
+    public <R> R accept(Stmt.Visitor<R> visitor) {
         return visitor.visitExprStmt(this);
     }
 }

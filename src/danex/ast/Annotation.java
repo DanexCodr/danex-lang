@@ -9,7 +9,7 @@ public class Annotation extends Decl {
     }
 
     @Override
-    public <R> R accept(Visitor<R> visitor) {
+    public <R> R accept(Decl.Visitor<R> visitor) {
         return visitor.visitAnnotation(this);
     }
 }

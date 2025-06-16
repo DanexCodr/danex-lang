@@ -7,42 +7,11 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
     private Environment globals = new Environment();
     private Environment environment = globals;
 
-public Interpreter() {
-    globals.define("print", new DanexCallable() {
-        @Override
-        public Object call(Interpreter interpreter, List<Object> args) {
-            for (Object arg : args) {
-                System.out.println(arg);  // or use a better formatter if you like
-            }
-            return null;
-        }
-
-        @Override
-        public String toString() {
-            return "<builtin fn print>";
-        }
-    });
-}
-    
-    public static class Return extends RuntimeException {
-    public final Object value;
-
-    public Return(Object value) {
-        super(null, null, false, false);
-        this.value = value;
-    }
+    private static class Return extends RuntimeException {
+        final Object value;
+        Return(Object value) { super(null, null, false, false); this.value = value; }
     }
 
-public void executeInEnvironment(Stmt stmt, Environment newEnv) {
-    Environment previous = this.environment;
-    try {
-        this.environment = newEnv;
-        execute(stmt);
-    } finally {
-        this.environment = previous;
-    }
-}
-    
     public void interpret(List<Stmt> statements) {
         try {
             for (Stmt stmt : statements) execute(stmt);
@@ -51,18 +20,13 @@ public void executeInEnvironment(Stmt stmt, Environment newEnv) {
         }
     }
 
-public void interpretDecls(List<Decl> decls) {
-    try {
-        for (Decl decl : decls) decl.accept(this);
-        // Automatically run `main()` if it exists
-        Object maybeMain = globals.get("main");
-        if (maybeMain instanceof DanexCallable) {
-            ((DanexCallable) maybeMain).call(this, List.of());
+    public void interpretDecls(List<Decl> decls) {
+        try {
+            for (Decl decl : decls) decl.accept(this);
+        } catch (RuntimeError error) {
+            System.err.println("Runtime error in declaration: " + error.getMessage());
         }
-    } catch (RuntimeError error) {
-        System.err.println("Runtime error in declaration: " + error.getMessage());
     }
-}
 
     private void execute(Stmt stmt) { stmt.accept(this); }
     private Object evaluate(Expr expr) { return expr.accept(this); }
@@ -178,19 +142,12 @@ public void interpretDecls(List<Decl> decls) {
     }
 
     @Override
-public Object visitCallExpr(CallExpr expr) {
-    Object callee = evaluate(expr.callee);
-    List<Object> args = new ArrayList<>();
-    for (Expr arg : expr.arguments) {
-        args.add(evaluate(arg));
+    public Object visitCallExpr(CallExpr callExpr) {
+        Object callee = evaluate(callExpr.callee);
+        List<Object> args = new ArrayList<>();
+        for (Expr arg : callExpr.arguments) args.add(evaluate(arg));
+        throw new RuntimeError("Function calls not implemented yet.");
     }
-
-    if (!(callee instanceof DanexCallable)) {
-        throw new RuntimeError("Can only call functions and methods.");
-    }
-
-    return ((DanexCallable) callee).call(this, args);
-}
 
     @Override
     public Object visitLambdaExpr(LambdaExpr lambdaExpr) {
@@ -286,12 +243,14 @@ public Object visitCallExpr(CallExpr expr) {
         Object value = null;
         if (returnStmt.value != null) value = evaluate(returnStmt.value);
         throw new Return(value);
+        return null;
     }
 
     @Override
     public Void visitThrowStmt(ThrowStmt throwStmt) {
         Object ex = evaluate(throwStmt.exception);
         throw new RuntimeError(toStr(ex));
+        return null;
     }
 
     @Override
@@ -317,14 +276,15 @@ public Object visitCallExpr(CallExpr expr) {
     public Void visitClassDecl(ClassDecl classDecl) {
         // TODO: implement class declaration: name = " + classDecl.name + "
         throw new RuntimeError("Class declarations not implemented yet.");
+        return null;
     }
-    
+
     @Override
-public Void visitMethodDecl(MethodDecl decl) {
-    DanexFunction function = new DanexFunction(decl, environment);
-    globals.define(decl.name, function);
-    return null;
-}
+    public Void visitMethodDecl(MethodDecl methodDecl) {
+        // TODO: implement method declaration: name = " + methodDecl.name + "
+        throw new RuntimeError("Method declarations not implemented yet.");
+        return null;
+    }
 
     @Override
     public Void visitImportDecl(ImportDecl importDecl) {
@@ -332,20 +292,4 @@ public Void visitMethodDecl(MethodDecl decl) {
         return null;
     }
 
-    @Override
-    public Void visitResourceDecl(ResourceDecl rd) {
-        // handle try-with-resources or ignore
-        return null;
-    }
-
-    @Override
-    public Void visitParam(Param param) {
-        return null;
-    }
-
-    @Override
-    public Void visitAnnotation(Annotation annotation) {
-        return null;
-    }
-    
 }
