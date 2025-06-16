@@ -6,18 +6,19 @@ import java.util.*;
 
 /**
  * Generates AstBuilder.java with visitor methods for AST nodes,
- * but skips those we handle manually (Annotation, Param, ResourceDecl, ExprStmt).
+ * but skips those we handle manually (Annotation, Param, ResourceDecl, ExprStmt),
+ * and excludes removed AST nodes (e.g. ReturnStmt).
  */
 public class AstBuilderGenerator {
     private static final Path AST_DIR = Paths.get("src/danex/ast");
     private static final Path OUTPUT_FILE = Paths.get("src/danex/AstBuilder.java");
 
-    /** Node class names for which we supply manual overrides, to avoid duplicates. */
+    /** Node class names for which we supply manual overrides or are deprecated/removed. */
     private static final Set<String> MANUAL_OVERRIDES = Set.of(
         "Annotation",
         "Param",
         "ResourceDecl",
-        "ExprStmt"
+        "ExprStmt",
     );
 
     public static void main(String[] args) {
@@ -95,7 +96,8 @@ public class AstBuilderGenerator {
         String fileName = path.getFileName().toString();
         if (!fileName.endsWith(".java")) return null;
         String className = fileName.substring(0, fileName.length() - 5);
-        if (className.equals("ReturnStmt")) return null;
+
+        if (MANUAL_OVERRIDES.contains(className)) return null;
 
         boolean isExpr = className.endsWith("Expr");
         boolean isStmt = className.endsWith("Stmt");
