@@ -202,4 +202,40 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
         return new ThrowStmt(exception);
     }
 
+    // === Manual overrides for certain AST node types ===
+
+    @Override
+    public Annotation visitAnnotation(Annotation annotation) {
+        // Return a new Annotation or process children if needed
+        return new Annotation(annotation.name);
+    }
+
+    @Override
+    public Param visitParam(Param param) {
+        // Return a new Param or process children if needed
+        return new Param(param.type, param.name, param.varargs);
+    }
+
+    @Override
+    public ResourceDecl visitResourceDecl(ResourceDecl rd) {
+        // Visit initializer expression
+        Expr init = rd.initializer.accept(this);
+        return new ResourceDecl(rd.type, rd.name, init);
+    }
+
+    @Override
+    public ExprStmt visitExprStmt(ExprStmt stmt) {
+        // Visit inner expression
+        Expr e = stmt.expression.accept(this);
+        return new ExprStmt(e);
+    }
+
+    // If your AST uses ExpressionStmt instead of ExprStmt, uncomment below:
+    // @Override
+    // public ExpressionStmt visitExpressionStmt(ExpressionStmt stmt) {
+    //     Expr e = stmt.expression.accept(this);
+    //     return new ExpressionStmt(e);
+    // }
+
+    // Add further manual overrides here if needed.
 }
