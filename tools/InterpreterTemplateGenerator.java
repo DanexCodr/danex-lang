@@ -18,10 +18,11 @@ public class InterpreterTemplateGenerator {
     private static final String[] STMT_NODES = {
         "ExprStmt", "BlockStmt", "IfStmt", "WhileStmt", "DoWhileStmt",
         "ForStmt", "ReturnStmt", "ThrowStmt", "ExitStmt", "TryStmt"
-        // Declarations removed from here
     };
     private static final String[] DECL_NODES = {
-        "ClassDecl", "MethodDecl", "ImportDecl"
+        "ClassDecl", "MethodDecl", "ImportDecl",
+        // Optionally skip Annotation and Param for runtime, or include:
+        // "Annotation", "Param"
     };
 
     public static void main(String[] args) throws IOException {
@@ -204,6 +205,7 @@ public class InterpreterTemplateGenerator {
                     w.write("        throw new RuntimeError(\"Do-expression not supported yet.\");\n");
                     break;
                 case "TryExpr":
+                    w.write("        // Evaluate try-expression: TODO implement semantics\n");
                     w.write("        throw new RuntimeError(\"Try-expression not supported yet.\");\n");
                     break;
                 default:
@@ -270,7 +272,7 @@ public class InterpreterTemplateGenerator {
                     w.write("        try {\n");
                     w.write("            for (Stmt s : " + var + ".tryBlock) execute(s);\n");
                     w.write("        } catch (RuntimeError e) {\n");
-                    w.write("            // TODO: handle catch: variable name = " + var + ".exceptionName\n");
+                    w.write("            // TODO: handle catch: type = \" + " + var + ".catchType + \", name = \" + " + var + ".catchName + \"\n");
                     w.write("            throw e;\n");
                     w.write("        } finally {\n");
                     w.write("            for (Stmt s : " + var + ".finallyBlock) execute(s);\n");
@@ -291,7 +293,7 @@ public class InterpreterTemplateGenerator {
             w.write("    public Void visit" + className + "(" + className + " " + var + ") {\n");
             switch (className) {
                 case "ImportDecl":
-                    w.write("        // 'use' / import: no-op at runtime (or record module)\n");
+                    w.write("        // 'use' / import: no-op or record module as needed\n");
                     break;
                 case "ClassDecl":
                     w.write("        // TODO: implement class declaration: name = \" + " + var + ".name + \"\n");
@@ -313,4 +315,4 @@ public class InterpreterTemplateGenerator {
         if (s == null || s.isEmpty()) return s;
         return Character.toLowerCase(s.charAt(0)) + s.substring(1);
     }
-                        }
+}
