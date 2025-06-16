@@ -37,25 +37,40 @@ jobs:
 
       - name: Generate ANTLR Lexer & Parser (with visitors)
         run: |
-          mkdir -p src/generated
+          mkdir -p src/danex
+
+          echo "Generating lexer..."
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -visitor \
-            -package danex.antlr \
-            -o src/generated \
-            grammar/DanexLexer.g4 grammar/DanexParser.g4
+            -package danex.grammar \
+            -o src/danex \
+            grammar/DanexLexer.g4
+
+          echo "Locating .tokens file..."
+          TOKENS_DIR=$(find src/danex/grammar -name DanexLexer.tokens -exec dirname {} \;)
+          echo "Found tokens in: $TOKENS_DIR"
+
+          echo "Generating parser..."
+          java -jar lib/antlr-4.9.2-complete.jar \
+            -Dlanguage=Java \
+            -visitor \
+            -package danex.grammar \
+            -o src/danex \
+            -lib "$TOKENS_DIR" \
+            grammar/DanexParser.g4
 
       - name: Compile all source files
         run: |
           mkdir -p bin
           echo "Compiling ANTLR-generated files..."
-          find src/generated -name "*.java" > gen-sources.txt
+          find src/danex/grammar -name "*.java" > gen-sources.txt
           javac -cp lib/antlr-4.9.2-complete.jar -d bin @gen-sources.txt
 
           echo "Compiling DanexLang source..."
           find src -name "*.java" > sources.txt
           javac -cp "lib/antlr-4.9.2-complete.jar:bin" -d bin @sources.txt
 
-      - name: Run example
+      - name: Run DanexLang example
         run: |
           java -cp "bin:lib/antlr-4.9.2-complete.jar" Main example/Hello.danex
