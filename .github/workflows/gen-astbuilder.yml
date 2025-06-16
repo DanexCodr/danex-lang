@@ -20,7 +20,8 @@ jobs:
           java-version: '17'
 
       - name: Ensure src/danex directory exists
-        run: mkdir -p src/danex
+        run: |
+          mkdir -p src/danex
 
       - name: Compile AstBuilderGenerator
         run: |
@@ -43,8 +44,8 @@ jobs:
 
       - name: Commit generated AstBuilder
         run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
           git add src/danex/AstBuilder.java
           git commit -m "chore: Generate AstBuilder.java [skip ci]" || echo "No changes to commit"
           git push
