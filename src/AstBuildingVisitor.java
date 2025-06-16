@@ -6,8 +6,7 @@ import danex.*;             // AstBuilder, RuntimeError, etc.
 import danex.grammar.*;     // ANTLR-generated parser/lexer classes
 import org.antlr.v4.runtime.tree.ParseTree;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * Visitor that walks the ANTLR parse tree and builds AST Decl nodes via AstBuilder.
@@ -19,6 +18,130 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         this.builder = builder;
     }
 
+private boolean detectAssignmentTo(Stmt stmt, String resultName, String methodName) {
+    class Scanner implements Stmt.Visitor<Boolean>, Expr.Visitor<Boolean> {
+        // Expr visitors: only recurse into sub-exprs
+        @Override public Boolean visitBinaryExpr(BinaryExpr be) {
+            return scanExpr(be.left) || scanExpr(be.right);
+        }
+        @Override public Boolean visitUnaryExpr(UnaryExpr ue) {
+            return scanExpr(ue.right);
+        }
+        @Override public Boolean visitLiteralExpr(LiteralExpr le) {
+            return false;
+        }
+        @Override public Boolean visitGroupingExpr(GroupingExpr ge) {
+            return scanExpr(ge.expression);
+        }
+        @Override public Boolean visitVariableExpr(VariableExpr ve) {
+            return false;
+        }
+        @Override public Boolean visitAssignExpr(AssignExpr ae) {
+            // assignments in expressions are usually only in ExprStmt; but still check inner:
+            boolean inner = scanExpr(ae.value);
+            // The outer AssignStmt visitor handles checking target
+            return inner;
+        }
+        @Override public Boolean visitCallExpr(CallExpr ce) {
+            boolean found = scanExpr(ce.callee);
+            for (Expr arg : ce.arguments) {
+                if (scanExpr(arg)) return true;
+            }
+            return found;
+        }
+        @Override public Boolean visitLambdaExpr(LambdaExpr le) { return false; }
+        @Override public Boolean visitDoExpr(DoExpr de) { 
+            for (Stmt s: de.body) if (scanStmt(s)) return true;
+            return false;
+        }
+        @Override public Boolean visitTryExpr(TryExpr te) {
+            for (Stmt s: te.tryBlock) if (scanStmt(s)) return true;
+            if (te.catchBlock != null) for (Stmt s: te.catchBlock) if (scanStmt(s)) return true;
+            if (te.finallyBlock != null) for (Stmt s: te.finallyBlock) if (scanStmt(s)) return true;
+            return false;
+        }
+        @Override public Boolean visitAwaitExpr(AwaitExpr ae) { return false; }
+        @Override public Boolean visitNullCoalesceExpr(NullCoalesceExpr ne) {
+            return scanExpr(ne.left) || scanExpr(ne.right);
+        }
+        @Override public Boolean visitComparatorExpr(ComparatorExpr ce) {
+            return scanExpr(ce.left) || scanExpr(ce.right);
+        }
+
+        // Stmt visitors
+        @Override public Boolean visitExprStmt(ExprStmt es) {
+            return scanExpr(es.expression);
+        }
+        @Override public Boolean visitAssignStmt(AssignStmt stmt) {
+            // Check if target is a VariableExpr matching resultName or methodName
+            Expr tgt = stmt.target;
+            if (tgt instanceof VariableExpr) {
+                String var = ((VariableExpr) tgt).name;
+                if ((resultName != null && var.equals(resultName)) || var.equals(methodName)) {
+                    return true;
+                }
+            }
+            // still scan value:
+            return scanExpr(stmt.value);
+        }
+        @Override public Boolean visitBlockStmt(BlockStmt bs) {
+            for (Stmt s: bs.statements) {
+                if (scanStmt(s)) return true;
+            }
+            return false;
+        }
+        @Override public Boolean visitIfStmt(IfStmt ifs) {
+            if (scanExpr(ifs.condition)) return true;
+            if (scanStmt(ifs.thenBranch)) return true;
+            if (ifs.elseBranch != null && scanStmt(ifs.elseBranch)) return true;
+            return false;
+        }
+        @Override public Boolean visitWhileStmt(WhileStmt ws) {
+            if (scanExpr(ws.condition)) return scanStmt(ws.body);
+            return false;
+        }
+        @Override public Boolean visitDoWhileStmt(DoWhileStmt dws) {
+            if (scanStmt(dws.body)) return true;
+            return scanExpr(dws.condition);
+        }
+        @Override public Boolean visitForStmt(ForStmt fs) {
+            if (fs.init != null && scanStmt(fs.init)) return true;
+            if (fs.condition != null && scanExpr(fs.condition)) return true;
+            if (fs.update != null && scanExpr(fs.update)) return true;
+            return scanStmt(fs.body);
+        }
+        @Override public Boolean visitThrowStmt(ThrowStmt ts) {
+            return scanExpr(ts.exception);
+        }
+        @Override public Boolean visitExitStmt(ExitStmt es) {
+            return false;
+        }
+        @Override public Boolean visitTryStmt(TryStmt ts) {
+            for (Stmt s: ts.tryBlock) if (scanStmt(s)) return true;
+            if (ts.catchBlock != null) for (Stmt s: ts.catchBlock) if (scanStmt(s)) return true;
+            if (ts.finallyBlock != null) for (Stmt s: ts.finallyBlock) if (scanStmt(s)) return true;
+            return false;
+        }
+        @Override public Boolean visitClassDecl(ClassDecl cd) { return false; }
+        @Override public Boolean visitMethodDecl(MethodDecl md) { return false; }
+        @Override public Boolean visitImportDecl(ImportDecl id) { return false; }
+        @Override public Boolean visitAnnotation(Annotation a) { return false; }
+        @Override public Boolean visitParam(Param p) { return false; }
+        @Override public Boolean visitResourceDecl(ResourceDecl rd) { return false; }
+
+        private Boolean scanExpr(Expr e) {
+            if (e == null) return false;
+            return e.accept(this);
+        }
+        private Boolean scanStmt(Stmt s) {
+            if (s == null) return false;
+            return s.accept(this);
+        }
+    }
+    Scanner scanner = new Scanner();
+    return scanner.scanStmt(stmt);
+}
+    
     /**
      * Top-level: collect declarations (ImportDecl, ClassDecl, MethodDecl).
      * Grammar: compilationUnit: statement* EOF;
@@ -109,70 +232,129 @@ public Object visitTopLevelMethodDecl(DanexParser.TopLevelMethodDeclContext ctx)
     return buildTopLevelMethod(ctx);
 }
 
-/**
- * Helper for MethodDeclContext.
- */
+/** Helper for MethodDeclContext. */
 private Decl buildMethod(DanexParser.MethodDeclContext ctx) {
+    // 1. Annotations & modifiers
     List<Annotation> annotations = buildAnnotations(ctx.annotation());
     List<String> modifiers = buildModifiers(ctx.modifier());
 
+    // 2. Name
     if (ctx.IDENTIFIER() == null) {
-        throw new RuntimeException("MethodDecl is missing a name.");
+        throw new RuntimeException("MethodDecl missing name");
     }
-    String name = ctx.IDENTIFIER().getText();
+    String methodName = ctx.IDENTIFIER().getText();
 
+    // 3. resultDecl parsing under grammar: (IDENT (IDENT)?)?
     String resultType = null;
     String resultName = null;
     if (ctx.resultDecl() != null) {
-        resultType = ctx.resultDecl().type().getText();
-        if (ctx.resultDecl().IDENTIFIER() != null) {
-            resultName = ctx.resultDecl().IDENTIFIER().getText();
+        List<org.antlr.v4.runtime.tree.TerminalNode> ids = ctx.resultDecl().IDENTIFIER();
+        if (ids.size() == 2) {
+            // explicit type + name
+            resultType = ids.get(0).getText();
+            resultName = ids.get(1).getText();
+        } else if (ids.size() == 1) {
+            // name-only, type inferred
+            resultName = ids.get(0).getText();
+            resultType = null;
+        } else {
+            throw new RuntimeException("Invalid result declaration syntax");
         }
     }
-
+    // 4. Params (typed required by grammar)
     List<Param> params = buildParams(ctx.paramList());
-    Stmt bodyStmt = buildMethodBody(name, resultName, ctx.methodBody());
 
-    MethodDecl methodNode = new MethodDecl(name, resultType, resultName, annotations, modifiers, params, bodyStmt);
-    
-    if (methodNode.name == null) {
-        throw new RuntimeException("Built method has null name.");
+    // 5. Check conflict: param name cannot equal resultName
+    if (resultName != null) {
+        for (Param p : params) {
+            if (p.name.equals(resultName)) {
+                throw new RuntimeException("Parameter '" + p.name +
+                    "' conflicts with result variable name in method '" + methodName + "'");
+            }
+        }
     }
-    System.out.println("[DEBUG] Built method: " + methodNode.name);
-    
+    // Additionally: parameter cannot equal methodName if you want to forbid that, but usually only resultName matters.
+
+    // 6. Build body (block or arrow form)
+    Stmt bodyStmt = buildMethodBody(methodName, resultName, ctx.methodBody());
+
+    // 7. Semantic check: if resultName declared, ensure at least one assignment occurs
+    if (resultName != null) {
+        boolean assigned = detectAssignmentTo(bodyStmt, resultName, methodName);
+        if (!assigned) {
+            throw new RuntimeException("Method '" + methodName +
+                "' declares result '" + resultName + "' but no assignment found in body");
+        }
+    }
+    // If resultName == null: it's a void method or uses assignment-to-methodName for implicit return; 
+    // you could optionally check that if assignment-to-methodName appears, treat as return, otherwise void.
+
+    // 8. Build MethodDecl AST and pass to builder
+    MethodDecl methodNode = new MethodDecl(methodName, resultType, resultName,
+                                           annotations, modifiers, params, bodyStmt);
+    System.out.println("[DEBUG] Built method: " + methodName);
     return builder.visitMethodDecl(methodNode);
 }
 
+/** Helper for TopLevelMethodDeclContext: same logic as buildMethod */
 private Decl buildTopLevelMethod(DanexParser.TopLevelMethodDeclContext ctx) {
+    // 1. Annotations & modifiers
     List<Annotation> annotations = buildAnnotations(ctx.annotation());
     List<String> modifiers = buildModifiers(ctx.modifier());
 
+    // 2. Name
     if (ctx.IDENTIFIER() == null) {
-        throw new RuntimeException("TopLevelMethodDecl is missing a name.");
+        throw new RuntimeException("TopLevelMethodDecl missing name");
     }
-    String name = ctx.IDENTIFIER().getText();
+    String methodName = ctx.IDENTIFIER().getText();
 
+    // 3. resultDecl parsing
     String resultType = null;
     String resultName = null;
     if (ctx.resultDecl() != null) {
-        resultType = ctx.resultDecl().type().getText();
-        if (ctx.resultDecl().IDENTIFIER() != null) {
-            resultName = ctx.resultDecl().IDENTIFIER().getText();
+        List<org.antlr.v4.runtime.tree.TerminalNode> ids = ctx.resultDecl().IDENTIFIER();
+        if (ids.size() == 2) {
+            resultType = ids.get(0).getText();
+            resultName = ids.get(1).getText();
+        } else if (ids.size() == 1) {
+            resultName = ids.get(0).getText();
+            resultType = null;
+        } else {
+            throw new RuntimeException("Invalid result declaration syntax");
+        }
+    }
+    // 4. Params
+    List<Param> params = buildParams(ctx.paramList());
+
+    // 5. Conflict check
+    if (resultName != null) {
+        for (Param p : params) {
+            if (p.name.equals(resultName)) {
+                throw new RuntimeException("Parameter '" + p.name +
+                    "' conflicts with result variable name in top-level method '" + methodName + "'");
+            }
         }
     }
 
-    List<Param> params = buildParams(ctx.paramList());
-    Stmt bodyStmt = buildMethodBody(name, resultName, ctx.methodBody());
+    // 6. Build body
+    Stmt bodyStmt = buildMethodBody(methodName, resultName, ctx.methodBody());
 
-    MethodDecl methodNode = new MethodDecl(name, resultType, resultName, annotations, modifiers, params, bodyStmt);
-
-    if (methodNode.name == null) {
-        throw new RuntimeException("Built top-level method has null name.");
+    // 7. Semantic check
+    if (resultName != null) {
+        boolean assigned = detectAssignmentTo(bodyStmt, resultName, methodName);
+        if (!assigned) {
+            throw new RuntimeException("Top-level method '" + methodName +
+                "' declares result '" + resultName + "' but no assignment found in body");
+        }
     }
-    System.out.println("[DEBUG] Built top-level method: " + methodNode.name);
 
+    // 8. Build AST node
+    MethodDecl methodNode = new MethodDecl(methodName, resultType, resultName,
+                                           annotations, modifiers, params, bodyStmt);
+    System.out.println("[DEBUG] Built top-level method: " + methodName);
     return builder.visitMethodDecl(methodNode);
 }
+    
     /**
 
 Shared param builder for both MethodDeclContext and TopLevelMethodDeclContext.
