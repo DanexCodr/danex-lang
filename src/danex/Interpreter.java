@@ -12,6 +12,16 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
         Return(Object value) { super(null, null, false, false); this.value = value; }
     }
 
+public void executeInEnvironment(Stmt stmt, Environment newEnv) {
+    Environment previous = this.environment;
+    try {
+        this.environment = newEnv;
+        execute(stmt);
+    } finally {
+        this.environment = previous;
+    }
+}
+    
     public void interpret(List<Stmt> statements) {
         try {
             for (Stmt stmt : statements) execute(stmt);
@@ -142,12 +152,19 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
     }
 
     @Override
-    public Object visitCallExpr(CallExpr callExpr) {
-        Object callee = evaluate(callExpr.callee);
-        List<Object> args = new ArrayList<>();
-        for (Expr arg : callExpr.arguments) args.add(evaluate(arg));
-        throw new RuntimeError("Function calls not implemented yet.");
+public Object visitCallExpr(CallExpr expr) {
+    Object callee = evaluate(expr.callee);
+    List<Object> args = new ArrayList<>();
+    for (Expr arg : expr.arguments) {
+        args.add(evaluate(arg));
     }
+
+    if (!(callee instanceof DanexCallable)) {
+        throw new RuntimeError("Can only call functions and methods.");
+    }
+
+    return ((DanexCallable) callee).call(this, args);
+}
 
     @Override
     public Object visitLambdaExpr(LambdaExpr lambdaExpr) {
@@ -277,13 +294,9 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
     }
     
     @Override
-    public Void visitMethodDecl(MethodDecl decl) {
-    // For now, just print the method info
-    System.out.println("Found method: " + decl.name);
-
-    // In future, store it in a method table for calls
-    // methodTable.put(decl.name, decl);
-
+public Void visitMethodDecl(MethodDecl decl) {
+    DanexFunction function = new DanexFunction(decl, environment);
+    globals.define(decl.name, function);
     return null;
 }
 
