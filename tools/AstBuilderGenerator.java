@@ -8,119 +8,344 @@ public class AstBuilderGenerator {
     private static final String OUTPUT_PATH = "src/danex/AstBuilder.java";
 
     public static void main(String[] args) throws IOException {
-        List<String> exprTypes = Arrays.asList(
-            "Assign     : String name, Expr value",
-            "Binary     : Expr left, String operator, Expr right",
-            "Call       : Expr callee, List<Expr> arguments",
-            "Comparator : Expr left, Expr right",
-            "Do         : List<Stmt> body",
-            "DoExpr     : List<Stmt> body",
-            "Grouping   : Expr expression",
-            "Lambda     : List<String> params, List<Stmt> body",
-            "Literal    : Object value",
-            "NullCoalesce : Expr left, Expr right",
-            "Unary      : String operator, Expr right",
-            "Variable   : String name",
-            "Await      : Expr expression",
-            "TryExpr    : Expr tryExpr, String exceptionName, Expr catchExpr"
-        );
-
-        List<String> stmtTypes = Arrays.asList(
-            "Block      : List<Stmt> statements",
-            "Expr       : Expr expression",
-            "If         : Expr condition, Stmt thenBranch, Stmt elseBranch",
-            "While      : Expr condition, Stmt body",
-            "DoWhile    : Stmt body, Expr condition",
-            "For        : Stmt init, Expr condition, Expr update, Stmt body",
-            "Return     : Expr value",
-            "Throw      : Expr exception",
-            "Exit       : ",
-            "Try        : List<Stmt> tryBlock, String exceptionName, List<Stmt> catchBlock, List<Stmt> finallyBlock",
-            "Class      : String name, List<Stmt> methods",
-            "Method     : String name, List<String> params, List<Stmt> body",
-            "Import     : String path"
-        );
-
+        System.out.println("Working dir: " + System.getProperty("user.dir"));
+        System.out.println("Starting AstBuilder generation...");
         StringBuilder sb = new StringBuilder();
-        sb.append("package danex;\n\n");
-        sb.append("import danex.ast.*;\n");
-        sb.append("import java.util.*;\n\n");
-        sb.append("public class AstBuilder implements DanexParserVisitor<Object> {\n\n");
+        
+        // Header and imports
+        sb.append("""
+            package danex;
+            
+            import danex.antlr.DanexParser;
+            import danex.antlr.DanexParserBaseVisitor;
+            import danex.ast.*;
+            import org.antlr.v4.runtime.tree.TerminalNode;
+            import java.util.*;
+            
+            public class AstBuilder extends DanexParserBaseVisitor<Object> {
+            
+            """);
 
-        // Expression builders
-        for (String type : exprTypes) {
-            generateVisitorMethod(sb, type, true);
-        }
+        // Helper method for list collection
+        String listCollector = """
+                private <T> List<T> collectList(java.util.List<? extends org.antlr.v4.runtime.ParserRuleContext> contexts) {
+                    List<T> list = new ArrayList<>();
+                    for (var ctx : contexts) {
+                        list.add((T) visit(ctx));
+                    }
+                    return list;
+                }
+            """;
+        sb.append(listCollector).append("\n");
 
-        // Statement builders
-        for (String type : stmtTypes) {
-            generateVisitorMethod(sb, type, false);
-        }
+        // Visit methods
+        sb.append("""
+            @Override
+            public Object visitCompilationUnit(DanexParser.CompilationUnitContext ctx) {
+                return collectList<Stmt>(ctx.statement());
+            }
+            
+            @Override
+            public Object visitImportStmt(DanexParser.ImportStmtContext ctx) {
+                String module = ctx.IDENTIFIER(0).getText();
+                String alias = ctx.IDENTIFIER().size() > 1 
+                    ? ctx.IDENTIFIER(1).getText() 
+                    : null;
+                return new ImportStmt(module, alias);
+            }
+            """);
 
+        // Class declaration
+        sb.append("""
+            private static class ClassBodyResult {
+                List<Stmt> members;
+                ClassBodyResult(List<Stmt> m) { this.members = m; }
+            }
+            
+            @Override
+            public Object visitClassDecl(DanexParser.ClassDeclContext ctx) {
+                List<String> annotations = collectAnnotations(ctx.annotation());
+                List<String> modifiers = collectModifiers(ctx.modifier());
+                ClassBodyResult body = (ClassBodyResult) visit(ctx.classBody());
+                return new ClassStmt(
+                    ctx.IDENTIFIER().getText(), 
+                    modifiers, 
+                    annotations, 
+                    body.members
+                );
+            }
+            
+            @Override
+            public Object visitClassBody(DanexParser.ClassBodyContext ctx) {
+                return new ClassBodyResult(collectList<Stmt>(ctx.classBodyMember()));
+            }
+            
+            @Override
+            public Object visitClassBodyMember(DanexParser.ClassBodyMemberContext ctx) {
+                return ctx.methodDecl() != null 
+                    ? visitMethodDecl(ctx.methodDecl()) 
+                    : visitClassDecl(ctx.classDecl());
+            }
+            
+            private List<String> collectAnnotations(List<DanexParser.AnnotationContext> annotations) {
+                List<String> result = new ArrayList<>();
+                for (DanexParser.AnnotationContext a : annotations) {
+                    result.add(a.IDENTIFIER().getText());
+                }
+                return result;
+            }
+            
+            private List<String> collectModifiers(List<DanexParser.ModifierContext> modifiers) {
+                List<String> result = new ArrayList<>();
+                for (DanexParser.ModifierContext m : modifiers) {
+                    result.add(m.getText());
+                }
+                return result;
+            }
+            """);
+
+        // Method declarations
+        sb.append("""
+            @Override
+            public Object visitMethodDecl(DanexParser.MethodDeclContext ctx) {
+                List<String> annotations = collectAnnotations(ctx.annotation());
+                List<String> modifiers = collectModifiers(ctx.modifier());
+                
+                String returnType = null;
+                String returnName = null;
+                if (ctx.resultDecl() != null) {
+                    DanexParser.ResultDeclContext rCtx = ctx.resultDecl();
+                    returnType = rCtx.type().getText();
+                    returnName = rCtx.IDENTIFIER() != null 
+                        ? rCtx.IDENTIFIER().getText() 
+                        : null;
+                }
+                
+                List<Parameter> params = ctx.paramList() != null
+                    ? collectList<Parameter>(ctx.paramList().param())
+                    : new ArrayList<>();
+                
+                Stmt body = (Stmt) visit(ctx.methodBody());
+                return new MethodStmt(
+                    ctx.IDENTIFIER().getText(),
+                    returnType,
+                    params,
+                    body,
+                    modifiers,
+                    annotations
+                );
+            }
+            
+            @Override
+            public Object visitTopLevelMethodDecl(DanexParser.TopLevelMethodDeclContext ctx) {
+                return visitMethodDecl(ctx.methodDecl());
+            }
+            
+            @Override
+            public Object visitParam(DanexParser.ParamContext ctx) {
+                return new Parameter(
+                    ctx.type().getText(),
+                    ctx.IDENTIFIER().getText(),
+                    ctx.VARARGS() != null
+                );
+            }
+            
+            @Override
+            public Object visitMethodBody(DanexParser.MethodBodyContext ctx) {
+                return ctx.block() != null
+                    ? visitBlock(ctx.block())
+                    : new ExprStmt((Expr) visit(ctx.expression()));
+            }
+            """);
+
+        // Control flow statements
+        sb.append(generateControlFlowMethods());
+
+        // Expressions
+        sb.append(generateExpressionMethods());
+
+        // Footer
         sb.append("}\n");
 
-        // Write to file
-        Files.createDirectories(Paths.get("src/danex"));
-        Files.write(Paths.get(OUTPUT_PATH), sb.toString().getBytes());
-        System.out.println("✅ AstBuilder.java generated!");
+        // Write file
+        Path out = Paths.get(OUTPUT_PATH);
+        Files.createDirectories(out.getParent());
+        Files.write(out, sb.toString().getBytes());
+        System.out.println("✅ AstBuilder.java generated at " + out.toAbsolutePath());
     }
 
-    private static void generateVisitorMethod(StringBuilder sb, String typeDef, boolean isExpr) {
-        String[] parts = typeDef.split(":");
-        String className = parts[0].trim();
-        String fieldList = parts.length > 1 ? parts[1].trim() : "";
-
-        String ruleName = className.toLowerCase() + (isExpr ? "Expr" : "Stmt");
-        String returnType = isExpr ? "Expr" : "Stmt";
-        String concreteClass = className + (isExpr ? "Expr" : "Stmt");
-
-        sb.append("    @Override\n");
-        sb.append("    public Object visit").append(capitalize(ruleName)).append("(DanexParser.")
-          .append(capitalize(ruleName)).append("Context ctx) {\n");
-
-        if (fieldList.isEmpty()) {
-            sb.append("        return new ").append(concreteClass).append("();\n");
-        } else {
-            List<String> fields = new ArrayList<>();
-            for (String field : fieldList.split(",")) {
-                String[] pair = field.trim().split(" ");
-                String fieldType = pair[0];
-                String fieldName = pair[1];
-
-                String parseCode = generateFieldExpr(fieldType, fieldName);
-                sb.append("        ").append(parseCode).append("\n");
-                fields.add(fieldName);
+    private static String generateControlFlowMethods() {
+        return """
+            @Override
+            public Object visitBlock(DanexParser.BlockContext ctx) {
+                List<Stmt> stmts = new ArrayList<>();
+                for (DanexParser.BlockContentContext bc : ctx.blockContent()) {
+                    Object v = visit(bc);
+                    if (v instanceof Stmt) stmts.add((Stmt) v);
+                }
+                return new BlockStmt(stmts);
             }
-            sb.append("        return new ").append(concreteClass).append("(")
-              .append(String.join(", ", fields)).append(");\n");
-        }
-
-        sb.append("    }\n\n");
+            
+            @Override
+            public Object visitBlockContent(DanexParser.BlockContentContext ctx) {
+                if (ctx.statement() != null) return visit(ctx.statement());
+                if (ctx.expressionStatement() != null) return visitExpressionStatement(ctx.expressionStatement());
+                if (ctx.ifStatement() != null) return visitIfStatement(ctx.ifStatement());
+                if (ctx.whileStatement() != null) return visitWhileStatement(ctx.whileStatement());
+                if (ctx.doWhileStatement() != null) return visitDoWhileStatement(ctx.doWhileStatement());
+                if (ctx.forStatement() != null) return visitForStatement(ctx.forStatement());
+                if (ctx.tryStatement() != null) return visitTryStatement(ctx.tryStatement());
+                if (ctx.exitStatement() != null) return visitExitStatement(ctx.exitStatement());
+                if (ctx.throwStatement() != null) return visitThrowStatement(ctx.throwStatement());
+                if (ctx.returnStatement() != null) return visitReturnStatement(ctx.returnStatement());
+                throw new RuntimeException("Unknown blockContent: " + ctx.getText());
+            }
+            
+            @Override
+            public Object visitExpressionStatement(DanexParser.ExpressionStatementContext ctx) {
+                return new ExprStmt((Expr) visit(ctx.expression()));
+            }
+            
+            @Override
+            public Object visitIfStatement(DanexParser.IfStatementContext ctx) {
+                Expr cond = (Expr) visit(ctx.expression());
+                Stmt thenB = (Stmt) visit(ctx.block(0));
+                Stmt elseB = ctx.block().size() > 1 
+                    ? (Stmt) visit(ctx.block(1)) 
+                    : null;
+                return new IfStmt(cond, thenB, elseB);
+            }
+            
+            @Override
+            public Object visitWhileStatement(DanexParser.WhileStatementContext ctx) {
+                return new WhileStmt(
+                    (Expr) visit(ctx.expression()),
+                    (Stmt) visit(ctx.block())
+                );
+            }
+            
+            @Override
+            public Object visitDoWhileStatement(DanexParser.DoWhileStatementContext ctx) {
+                return new DoWhileStmt(
+                    (Stmt) visit(ctx.block()),
+                    (Expr) visit(ctx.expression())
+                );
+            }
+            
+            @Override
+            public Object visitForStatement(DanexParser.ForStatementContext ctx) {
+                return new ForStmt(
+                    (Stmt) visit(ctx.assignment(0)),
+                    (Expr) visit(ctx.expression()),
+                    (Expr) visit(ctx.assignment(1)),
+                    (Stmt) visit(ctx.block())
+                );
+            }
+            
+            @Override
+            public Object visitTryStatement(DanexParser.TryStatementContext ctx) {
+                List<Stmt> tryBlk = collectList(ctx.block(0).blockContent());
+                
+                String excName = null;
+                List<Stmt> catchBlk = new ArrayList<>();
+                if (ctx.CATCH() != null) {
+                    excName = ctx.IDENTIFIER(0).getText();
+                    catchBlk = collectList(ctx.block(1).blockContent());
+                }
+                
+                List<Stmt> finBlk = new ArrayList<>();
+                if (ctx.FINALLY() != null) {
+                    int finallyIndex = ctx.block().size() - 1;
+                    finBlk = collectList(ctx.block(finallyIndex).blockContent());
+                }
+                
+                return new TryStmt(tryBlk, excName, catchBlk, finBlk);
+            }
+            
+            @Override
+            public Object visitExitStatement(DanexParser.ExitStatementContext ctx) { 
+                return new ExitStmt(); 
+            }
+            
+            @Override
+            public Object visitThrowStatement(DanexParser.ThrowStatementContext ctx) { 
+                return new ThrowStmt((Expr) visit(ctx.expression())); 
+            }
+            
+            @Override
+            public Object visitReturnStatement(DanexParser.ReturnStatementContext ctx) { 
+                return new ReturnStmt(
+                    ctx.expression() != null 
+                        ? (Expr) visit(ctx.expression()) 
+                        : null
+                ); 
+            }
+            """;
     }
 
-    private static String generateFieldExpr(String type, String name) {
-        if (type.equals("Expr")) {
-            return "Expr " + name + " = (Expr) ctx." + name + "().accept(this);";
-        } else if (type.equals("Stmt")) {
-            return "Stmt " + name + " = (Stmt) ctx." + name + "().accept(this);";
-        } else if (type.equals("List<Expr>")) {
-            return "List<Expr> " + name + " = new ArrayList<>();\n"
-                 + "        for (var e : ctx." + name + "()) " + name + ".add((Expr) e.accept(this));";
-        } else if (type.equals("List<Stmt>")) {
-            return "List<Stmt> " + name + " = new ArrayList<>();\n"
-                 + "        for (var s : ctx." + name + "()) " + name + ".add((Stmt) s.accept(this));";
-        } else if (type.equals("List<String>")) {
-            return "List<String> " + name + " = new ArrayList<>();\n"
-                 + "        for (var t : ctx." + name + "()) " + name + ".add(t.getText());";
-        } else if (type.equals("String")) {
-            return "String " + name + " = ctx." + name + "().getText();";
-        } else if (type.equals("Object")) {
-            return "Object " + name + " = ctx." + name + "().getText(); // TODO: parse Object properly";
-        }
-        return "// Unknown type for field: " + type + " " + name;
+    private static String generateExpressionMethods() {
+        return """
+            @Override
+            public Object visitAssignment(DanexParser.AssignmentContext ctx) {
+                String name = ctx.IDENTIFIER().getText();
+                String op = ctx.assignOp().getText();
+                Expr r = (Expr) visit(ctx.assignment());
+                return "=".equals(op)
+                    ? new AssignExpr(name, r)
+                    : new CompoundAssignExpr(name, op, r);
+            }
+            
+            @Override
+            public Object visitLambdaExpr(DanexParser.LambdaExprContext ctx) {
+                List<Parameter> params = ctx.paramList() != null
+                    ? collectList<Parameter>(ctx.paramList().param())
+                    : new ArrayList<>();
+                List<String> names = new ArrayList<>();
+                for (Parameter p : params) names.add(p.getName());
+                return new LambdaExpr(names, (Expr) visit(ctx.expression()));
+            }
+            
+            @Override
+            public Object visitLogicalOrExpr(DanexParser.LogicalOrExprContext ctx) {
+                return buildLeftAssociativeExpr(
+                    ctx.logicalAndExpr(), 
+                    ctx.OR_OR()
+                );
+            }
+            
+            @Override
+            public Object visitLogicalAndExpr(DanexParser.LogicalAndExprContext ctx) {
+                return buildLeftAssociativeExpr(
+                    ctx.nullCoalesceExpr(), 
+                    ctx.AND_AND()
+                );
+            }
+            
+            @Override
+            public Object visitNullCoalesceExpr(DanexParser.NullCoalesceExprContext ctx) {
+                Expr expr = (Expr) visit(ctx.comparisonExpr(0));
+                for (int i = 1; i < ctx.comparisonExpr().size(); i++) {
+                    expr = new BinaryExpr(expr, "??", (Expr) visit(ctx.comparisonExpr(i)));
+                }
+                return expr;
+            }
+            
+            private Expr buildLeftAssociativeExpr(
+                List<? extends org.antlr.v4.runtime.ParserRuleContext> exprs,
+                List<? extends org.antlr.v4.runtime.Token> ops
+            ) {
+                Expr left = (Expr) visit(exprs.get(0));
+                for (int i = 1; i < exprs.size(); i++) {
+                    left = new BinaryExpr(
+                        left,
+                        ops.get(i-1).getText(),
+                        (Expr) visit(exprs.get(i))
+                    );
+                }
+                return left;
+            }
+            
+            // Additional expression methods would follow similar patterns...
+            """;
     }
-
-    private static String capitalize(String name) {
-        return name.substring(0, 1).toUpperCase() + name.substring(1);
-    }
-              }
+}
