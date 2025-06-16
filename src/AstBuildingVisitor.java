@@ -1,12 +1,17 @@
-package src; // adjust package as needed
+// File: src/danex/AstBuildingVisitor.java
+package danex;
 
-import danex.ast.*;       // ensure AST node classes live here
-import danex.grammar.*;   // adjust if your parser package differs
-import danex.*;           // for AstBuilder
+import danex.ast.*;         // AST node classes: Annotation, Param, ExprStmt, ResourceDecl, etc.
+import danex.*;             // AstBuilder, RuntimeError, etc.
+import danex.grammar.*;     // ANTLR-generated parser/lexer classes
+import org.antlr.v4.runtime.tree.ParseTree;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Visitor that walks the ANTLR parse tree and builds AST Decl nodes via AstBuilder.
+ */
 public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
     private final AstBuilder builder;
 
@@ -27,7 +32,6 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
             if (result instanceof Decl) {
                 decls.add((Decl) result);
             } else {
-                // Should not happen: top-level statements are declarations in this grammar
                 throw new RuntimeException("Expected declaration at top-level, got: " + result);
             }
         }
@@ -66,7 +70,7 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         // Name
         String name = ctx.IDENTIFIER().getText();
 
-        // Members: grammar says classBodyMember: methodDecl | classDecl
+        // Members: classBodyMember: methodDecl | classDecl
         List<Decl> members = new ArrayList<>();
         for (var memberCtx : ctx.classBody().classBodyMember()) {
             Object memberObj = visit(memberCtx);
@@ -81,7 +85,6 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         return builder.visitClassDecl(classNode);
     }
 
-    // classBodyMember: methodDecl | classDecl
     @Override
     public Object visitClassBodyMember(DanexParser.ClassBodyMemberContext ctx) {
         if (ctx.methodDecl() != null) {
@@ -103,16 +106,8 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
 
     @Override
     public Object visitTopLevelMethodDecl(DanexParser.TopLevelMethodDeclContext ctx) {
-        // Grammar wraps a MethodDecl inside TopLevelMethodDecl
-        DanexParser.MethodDeclContext inner = ctx.methodDecl();
-        return buildMethod(inner);
-    }
-
-    /**
-     * Build MethodDecl AST node, then pass to builder.visitMethodDecl.
-     * Fields: name, resultType (or null), resultName (or null), annotations, modifiers, params, body (Stmt).
-     */
-    private Decl buildMethod(DanexParser.MethodDeclContext ctx) {
+        // NOTE: no ctx.methodDecl(): TopLevelMethodDeclContext directly contains methodDecl parts.
+        // Replicate buildMethod logic here, using ctx fields directly.
         // Annotations
         List<Annotation> annotations = new ArrayList<>();
         for (var annCtx : ctx.annotation()) {
@@ -133,13 +128,9 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         String resultType = null;
         String resultName = null;
         if (ctx.resultDecl() != null) {
-            // resultDecl: LPAREN type IDENTIFIER? RPAREN
             resultType = ctx.resultDecl().type().getText();
             if (ctx.resultDecl().IDENTIFIER() != null) {
-                // If grammar allows optional IDENTIFIER
                 resultName = ctx.resultDecl().IDENTIFIER().getText();
-            } else {
-                resultName = null;
             }
         }
 
@@ -151,21 +142,18 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
                 String pName;
                 boolean varargs = false;
                 if (pCtx.VARARGS() != null) {
-                    // grammar: type VARARGS IDENTIFIER
                     varargs = true;
                     pName = pCtx.IDENTIFIER().getText();
                 } else {
-                    // grammar: type IDENTIFIER
                     pName = pCtx.IDENTIFIER().getText();
                 }
                 Param paramNode = new Param(pType, pName, varargs);
-                // builder.visitParam if desired; but usually visitor constructs AST, then builder builds children:
                 paramNode = (Param) builder.visitParam(paramNode);
                 params.add(paramNode);
             }
         }
 
-        // Body: visit methodBody
+        // Body
         Stmt bodyStmt;
         if (ctx.methodBody().block() != null) {
             Object bObj = visit(ctx.methodBody().block());
@@ -174,18 +162,13 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
             }
             bodyStmt = (Stmt) bObj;
         } else {
-            // Arrow form: ctx.methodBody().ARROW expression SEMI
-            // We must wrap into a BlockStmt with a single assignment to resultName or methodName.
+            // Arrow form: wrap into BlockStmt with single assignment
             Expr expr = (Expr) visit(ctx.methodBody().expression());
-            // Determine assignment target: if resultName != null, assign to resultName; else assign to method name
             String targetName = (resultName != null) ? resultName : name;
-            // Build AssignExpr: targetName = expr
             AssignExpr assign = new AssignExpr(targetName, expr);
             assign = (AssignExpr) builder.visitAssignExpr(assign);
-            // Wrap into ExpressionStmt
             ExprStmt exprStmt = new ExprStmt(assign);
             exprStmt = (ExprStmt) builder.visitExprStmt(exprStmt);
-            // Wrap into BlockStmt
             List<Stmt> stmts = new ArrayList<>();
             stmts.add(exprStmt);
             BlockStmt block = new BlockStmt(stmts);
@@ -201,7 +184,6 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
     // -------------------
     @Override
     public Object visitBlock(DanexParser.BlockContext ctx) {
-        // block: LBRACE blockContent* RBRACE
         List<Stmt> stmts = new ArrayList<>();
         for (var bc : ctx.blockContent()) {
             Object o = visit(bc);
@@ -221,7 +203,6 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
             Object stmtObj = visit(ctx.statement());
             if (stmtObj instanceof Stmt) return stmtObj;
             if (stmtObj instanceof Decl) {
-                // Declarations inside block? Typically not allowed per grammar. Error:
                 throw new RuntimeException("Declaration not allowed here: " + stmtObj);
             }
             throw new RuntimeException("Expected Stmt in blockContent, got: " + stmtObj);
@@ -281,26 +262,27 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
 
     @Override
     public Object visitForStatement(DanexParser.ForStatementContext ctx) {
-        // forStatement: FOR LPAREN assignment SEMI expression SEMI assignment RPAREN block
-        // Note: init and update are assignments, but can be null if grammar allows?
+        // init
         Stmt initStmt = null;
         if (ctx.assignment(0) != null) {
-            // assignment returns Expr; wrap into ExprStmt if needed?
             Expr initExpr = (Expr) visit(ctx.assignment(0));
-            initStmt = new ExprStmt(initExpr);
-            initStmt = (ExprStmt) builder.visitExprStmt((ExprStmt)initStmt);
+            ExprStmt eStmt = new ExprStmt(initExpr);
+            initStmt = (ExprStmt) builder.visitExprStmt(eStmt);
         }
         Expr condition = (Expr) visit(ctx.expression());
         Stmt body = (Stmt) visit(ctx.block());
         Stmt updateStmt = null;
         if (ctx.assignment(1) != null) {
             Expr updateExpr = (Expr) visit(ctx.assignment(1));
-            updateStmt = new ExprStmt(updateExpr);
-            updateStmt = (ExprStmt) builder.visitExprStmt((ExprStmt)updateStmt);
+            ExprStmt uStmt = new ExprStmt(updateExpr);
+            updateStmt = (ExprStmt) builder.visitExprStmt(uStmt);
         }
-        // Our ForStmt AST: ForStmt(Stmt init, Expr condition, Expr update, Stmt body)
-        // But since updateStmt is an ExprStmt wrapping an AssignExpr, for interpreter we can evaluate via evaluate().
-        ForStmt forNode = new ForStmt(initStmt, condition, updateStmt == null ? null : ((ExprStmt)updateStmt).expression, body);
+        // ForStmt constructor: (Stmt init, Expr condition, Expr update, Stmt body)
+        Expr updateExpr = null;
+        if (updateStmt != null && updateStmt instanceof ExprStmt) {
+            updateExpr = ((ExprStmt) updateStmt).expression;
+        }
+        ForStmt forNode = new ForStmt(initStmt, condition, updateExpr, body);
         return builder.visitForStmt(forNode);
     }
 
@@ -337,7 +319,7 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
     public Object visitExpressionStatement(DanexParser.ExpressionStatementContext ctx) {
         Expr expr = (Expr) visit(ctx.expression());
         ExprStmt exprStmt = new ExprStmt(expr);
-        return builder.visitExpressionStmt(exprStmt);
+        return builder.visitExprStmt(exprStmt);
     }
 
     // -------------------
@@ -345,20 +327,18 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
     // -------------------
     @Override
     public Object visitAssignment(DanexParser.AssignmentContext ctx) {
-        // assignment: IDENTIFIER assignOp assignment
         String name = ctx.IDENTIFIER().getText();
-        String op = ctx.assignOp().getText(); // "=", "+=", etc.
+        String op = ctx.assignOp().getText();
         Expr value = (Expr) visit(ctx.assignment());
         AssignExpr assignNode;
         if ("=".equals(op)) {
             assignNode = new AssignExpr(name, value);
         } else {
-            // e.g., a += b  -> rewrite to a = a + b
-            String binaryOp = op.substring(0, op.length() - 1); // "+", "-", "*", "/", "%"
-            // Build: BinaryExpr(VariableExpr(name), binaryOp, value)
+            // e.g., a += b
+            String binOp = op.substring(0, op.length() - 1);
             VariableExpr leftVar = new VariableExpr(name);
             leftVar = (VariableExpr) builder.visitVariableExpr(leftVar);
-            BinaryExpr bin = new BinaryExpr(leftVar, binaryOp, value);
+            BinaryExpr bin = new BinaryExpr(leftVar, binOp, value);
             bin = (BinaryExpr) builder.visitBinaryExpr(bin);
             assignNode = new AssignExpr(name, bin);
         }
@@ -416,14 +396,10 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         }
         Expr left = (Expr) visit(ctx.additiveExpr(0));
         for (int i = 1; i < ctx.additiveExpr().size(); i++) {
-            String op = ctx.getChild(2*i - 1).getText(); // operator token
+            String op = ctx.getChild(2 * i - 1).getText();
             Expr right = (Expr) visit(ctx.additiveExpr(i));
-            ComparatorExpr cmp = new ComparatorExpr(left, right);
-            // Note: ComparatorExpr AST may assume operator "<=>"? But grammar allows multiple comparison operators.
-            // If you want to support <, >, <=, >=, ==, !=: you'd need a more general BinaryExpr.
-            // For simplicity, transform non-<=> comparisons into BinaryExpr:
             if ("<=>".equals(op)) {
-                cmp = new ComparatorExpr(left, right);
+                ComparatorExpr cmp = new ComparatorExpr(left, right);
                 left = (ComparatorExpr) builder.visitComparatorExpr(cmp);
             } else {
                 BinaryExpr bin = new BinaryExpr(left, op, right);
@@ -440,7 +416,7 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         }
         Expr left = (Expr) visit(ctx.multiplicativeExpr(0));
         for (int i = 1; i < ctx.multiplicativeExpr().size(); i++) {
-            String op = ctx.getChild(2*i - 1).getText();
+            String op = ctx.getChild(2 * i - 1).getText();
             Expr right = (Expr) visit(ctx.multiplicativeExpr(i));
             BinaryExpr bin = new BinaryExpr(left, op, right);
             left = (BinaryExpr) builder.visitBinaryExpr(bin);
@@ -455,7 +431,7 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         }
         Expr left = (Expr) visit(ctx.unaryExpr(0));
         for (int i = 1; i < ctx.unaryExpr().size(); i++) {
-            String op = ctx.getChild(2*i - 1).getText();
+            String op = ctx.getChild(2 * i - 1).getText();
             Expr right = (Expr) visit(ctx.unaryExpr(i));
             BinaryExpr bin = new BinaryExpr(left, op, right);
             left = (BinaryExpr) builder.visitBinaryExpr(bin);
@@ -465,9 +441,7 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
 
     @Override
     public Object visitUnaryExpr(DanexParser.UnaryExprContext ctx) {
-        // unaryExpr: (BANG | PLUS | MINUS | AWAIT)* primaryExpr
         Expr expr = (Expr) visit(ctx.primaryExpr());
-        // Apply prefixes in reverse order
         for (int i = ctx.getChildCount() - 2; i >= 0; i--) {
             String op = ctx.getChild(i).getText();
             UnaryExpr u = new UnaryExpr(op, expr);
@@ -505,9 +479,7 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
 
     @Override
     public Object visitFunctionCall(DanexParser.FunctionCallContext ctx) {
-        // functionCall: IDENTIFIER LPAREN (expression (COMMA expression)*)? RPAREN
         String name = ctx.IDENTIFIER().getText();
-        // Build callee as VariableExpr
         VariableExpr callee = new VariableExpr(name);
         callee = (VariableExpr) builder.visitVariableExpr(callee);
 
@@ -526,12 +498,9 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
     public Object visitLiteral(DanexParser.LiteralContext ctx) {
         Object value;
         if (ctx.NUMBER() != null) {
-            // parse number as Double
             value = Double.parseDouble(ctx.NUMBER().getText());
         } else if (ctx.STRING() != null) {
-            // strip quotes? Assuming AST stores raw string literal including quotes or unquoted?
             String text = ctx.STRING().getText();
-            // Remove surrounding quotes and unescape if desired. For simplicity, store the raw string literal text:
             value = text.substring(1, text.length() - 1);
         } else if (ctx.TRUE() != null) {
             value = Boolean.TRUE;
@@ -551,9 +520,7 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
     // -------------------
     @Override
     public Object visitDoExpression(DanexParser.DoExpressionContext ctx) {
-        // doExpression: DO block
         BlockStmt block = (BlockStmt) visit(ctx.block());
-        // AST DoExpr expects List<Stmt>
         DoExpr doNode = new DoExpr(block.statements);
         return builder.visitDoExpr(doNode);
     }
@@ -563,9 +530,7 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
     // -------------------
     @Override
     public Object visitTryExpression(DanexParser.TryExpressionContext ctx) {
-        // tryExpression: TRY block (CATCH (...)? block)? (FINALLY block)?
         BlockStmt tryBlock = (BlockStmt) visit(ctx.block(0));
-
         String catchType = null;
         String catchName = null;
         List<Stmt> catchStmts = null;
@@ -575,25 +540,21 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
             BlockStmt catchBlock = (BlockStmt) visit(ctx.block(1));
             catchStmts = catchBlock.statements;
         }
-
         List<Stmt> finallyStmts = null;
         if (ctx.FINALLY() != null) {
             int lastIdx = ctx.block().size() - 1;
             BlockStmt finallyBlock = (BlockStmt) visit(ctx.block(lastIdx));
             finallyStmts = finallyBlock.statements;
         }
-
-        TryExpr tryNode = new TryExpr(tryBlock.statements, catchType, catchName,
-                                      catchStmts, finallyStmts);
+        TryExpr tryNode = new TryExpr(tryBlock.statements, catchType, catchName, catchStmts, finallyStmts);
         return builder.visitTryExpr(tryNode);
     }
 
     // -------------------
-    // Try-statement (with optional resources)
+    // Try-statement
     // -------------------
     @Override
     public Object visitTryStatement(DanexParser.TryStatementContext ctx) {
-        // tryStatement: TRY (resourceSpec)? block (CATCH LPAREN IDENTIFIER IDENTIFIER RPAREN block)? (FINALLY block)?;
         List<ResourceDecl> resources = new ArrayList<>();
         if (ctx.resourceSpec() != null) {
             for (var resCtx : ctx.resourceSpec().resourceDecl()) {
@@ -613,22 +574,17 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
             BlockStmt catchBlock = (BlockStmt) visit(ctx.block(1));
             catchStmts = catchBlock.statements;
         }
-
         List<Stmt> finallyStmts = null;
         if (ctx.FINALLY() != null) {
             int lastIdx = ctx.block().size() - 1;
             BlockStmt finallyBlock = (BlockStmt) visit(ctx.block(lastIdx));
             finallyStmts = finallyBlock.statements;
         }
-
-        TryStmt tryNode = new TryStmt(resources, tryBlock.statements,
-                                      catchType, catchName,
-                                      catchStmts, finallyStmts);
+        TryStmt tryNode = new TryStmt(resources, tryBlock.statements, catchType, catchName, catchStmts, finallyStmts);
         return builder.visitTryStmt(tryNode);
     }
 
     private ResourceDecl buildResourceDecl(DanexParser.ResourceDeclContext ctx) {
-        // resourceDecl: type IDENTIFIER EQ expression
         String type = ctx.type().getText();
         String name = ctx.IDENTIFIER().getText();
         Expr initExpr = (Expr) visit(ctx.expression());
@@ -640,24 +596,18 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
     // -------------------
     @Override
     public Object visitAnnotation(DanexParser.AnnotationContext ctx) {
-        // annotation: HASH IDENTIFIER
         String name = ctx.IDENTIFIER().getText();
         Annotation ann = new Annotation(name);
         return builder.visitAnnotation(ann);
     }
 
     // -------------------
-    // Type: just return text
+    // Type: return as text if needed
     // -------------------
     @Override
     public Object visitType(DanexParser.TypeContext ctx) {
         return ctx.getText();
     }
 
-    // -------------------
-    // Other rules: you may need to implement more visitor methods per grammar.
-    // -------------------
-
-    // For rules not explicitly overridden, the default BaseVisitor will recurse.
-    // If some rules need special handling, override them similarly.
+    // Other rules omitted for brevity; add as needed.
             }
