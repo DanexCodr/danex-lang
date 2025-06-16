@@ -189,7 +189,7 @@ public Void visitParam(Param param) {
 @Override
 public Void visitAssignStmt(AssignStmt stmt) {
     Object value = evaluate(stmt.value);
-    environment.assign(stmt.varName, value);
+    environment.assign(stmt.name, value);
     return null;
 }
     
