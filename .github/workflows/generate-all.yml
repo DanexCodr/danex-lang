@@ -106,32 +106,29 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Step 1: Make sure working tree is on latest main
-          git fetch origin main
-          git rebase origin/main
-
-          # Step 2: Clean index and working directory just in case
+          # Ensure a clean index: unstage everything
           git reset
-          git checkout -- .
 
-          # Step 3: Stage only the generated files
+          # Stage only the generated files
           git add src/danex/ast src/danex/AstBuilder.java src/danex/Interpreter.java
 
+          # If nothing changed, skip commit
           if git diff --cached --quiet; then
             echo "No generated changes to commit."
             exit 0
           fi
 
-          # Step 4: Commit and push
+          # Commit on top of current HEAD (which Actions checked out)
           git commit -m "chore: regenerate AST, AstBuilder, Interpreter [skip ci]"
 
+          # Push with retry logic: if remote advanced, rebase this single commit then retry
           max_attempts=3; attempt=1
           until git push origin HEAD:main; do
             if [ $attempt -ge $max_attempts ]; then
               echo "❌ Push failed after $attempt attempts."
               exit 1
             fi
-            echo "⚠️ Push failed, retrying rebase..."
+            echo "⚠️ Push failed (remote may have advanced). Fetching and rebasing..."
             git fetch origin main
             git rebase origin/main
             attempt=$((attempt+1))
