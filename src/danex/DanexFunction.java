@@ -22,7 +22,7 @@ public class DanexFunction implements DanexCallable {
             localEnv.define(paramName, argValue);
         }
         interpreter.executeInEnvironment(declaration.body, localEnv);
-Object result = localEnv.get(declaration.resultVarName); // usually same as method name
+Object result = localEnv.get(declaration.resultName); // usually same as method name
 return result;
     }
 
