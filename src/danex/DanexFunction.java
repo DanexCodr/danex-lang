@@ -21,15 +21,9 @@ public class DanexFunction implements DanexCallable {
             Object argValue = i < args.size() ? args.get(i) : null;
             localEnv.define(paramName, argValue);
         }
-
-        try {
-            // The method body is a single Stmt (probably BlockStmt)
-            interpreter.executeInEnvironment(declaration.body, localEnv);
-        } catch (Interpreter.Return r) {
-            return r.value;
-        }
-
-        return null;
+        interpreter.executeInEnvironment(declaration.body, localEnv);
+Object result = localEnv.get(declaration.resultVarName); // usually same as method name
+return result;
     }
 
     @Override
