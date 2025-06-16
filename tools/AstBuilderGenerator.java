@@ -4,12 +4,6 @@ import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
 
-/**
- * Generates AstBuilder.java by scanning AST classes in src/danex/ast/.
- * Assumes each AST class is a top-level class in its own file, named XxxExpr or XxxStmt,
- * and contains `public final Type name;` fields corresponding to constructor parameters.
- * Generates methods implementing Expr.Visitor<Object> and Stmt.Visitor<Object>.
- */
 public class AstBuilderGenerator {
     private static final Path AST_DIR = Paths.get("src/danex/ast");
     private static final Path OUTPUT_FILE = Paths.get("src/danex/AstBuilder.java");
@@ -39,10 +33,14 @@ public class AstBuilderGenerator {
             sb.append("package danex;\n\n");
             sb.append("import danex.ast.*;\n");
             sb.append("import java.util.*;\n\n");
-            sb.append("public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt> {\n\n");
+            // Now implement Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.Visitor<Decl>
+            sb.append("public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.Visitor<Decl> {\n\n");
 
             for (AstClass cls : astClasses) {
-                if (cls.className.equals("Expr") || cls.className.equals("Stmt")) continue;
+                // Skip base classes
+                if (cls.className.equals("Expr") || cls.className.equals("Stmt") || cls.className.equals("Decl")) {
+                    continue;
+                }
                 sb.append(generateVisitorMethod(cls)).append("\n");
             }
 
@@ -68,7 +66,8 @@ public class AstBuilderGenerator {
 
         boolean isExpr = className.endsWith("Expr");
         boolean isStmt = className.endsWith("Stmt");
-        if (!isExpr && !isStmt) {
+        boolean isDecl = className.endsWith("Decl");
+        if (!isExpr && !isStmt && !isDecl) {
             return null;
         }
 
@@ -92,7 +91,7 @@ public class AstBuilderGenerator {
             System.err.println("Warning: No public final fields found in " + className);
         }
 
-        return new AstClass(className, isExpr, isStmt, fields);
+        return new AstClass(className, isExpr, isStmt, isDecl, fields);
     }
 
     private static String generateVisitorMethod(AstClass cls) {
@@ -100,10 +99,21 @@ public class AstBuilderGenerator {
         String className = cls.className;
         String paramName = Character.toLowerCase(className.charAt(0)) + className.substring(1);
 
+        String returnType;
+        if (cls.isExpr) {
+            returnType = "Expr";
+        } else if (cls.isStmt) {
+            returnType = "Stmt";
+        } else { // Decl
+            returnType = "Decl";
+        }
+
         sb.append("    @Override\n");
-        sb.append("    public Object visit").append(className)
+        sb.append("    public ").append(returnType)
+          .append(" visit").append(className)
           .append("(").append(className).append(" ").append(paramName).append(") {\n");
 
+        // Extract fields
         List<String> argNames = new ArrayList<>();
         for (Field f : cls.fields) {
             sb.append("        ").append(f.type).append(" ").append(f.name)
@@ -111,6 +121,7 @@ public class AstBuilderGenerator {
             argNames.add(f.name);
         }
 
+        // Return a new node with the same fields
         sb.append("        return new ").append(className)
           .append("(").append(String.join(", ", argNames)).append(");\n");
         sb.append("    }\n");
@@ -130,11 +141,13 @@ public class AstBuilderGenerator {
         final String className;
         final boolean isExpr;
         final boolean isStmt;
+        final boolean isDecl;
         final List<Field> fields;
-        AstClass(String className, boolean isExpr, boolean isStmt, List<Field> fields) {
+        AstClass(String className, boolean isExpr, boolean isStmt, boolean isDecl, List<Field> fields) {
             this.className = className;
             this.isExpr = isExpr;
             this.isStmt = isStmt;
+            this.isDecl = isDecl;
             this.fields = fields;
         }
     }
