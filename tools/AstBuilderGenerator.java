@@ -7,7 +7,8 @@ import java.util.regex.*;
 
 /**
  * Generates AstBuilder.java by scanning AST classes in src/danex/ast/.
- * Emits imports for danex.antlr.DanexParser and DanexParserVisitor.
+ * Assumes each AST class has a single constructor initializing final fields.
+ * AST class names end with Expr or Stmt.
  */
 public class AstBuilderGenerator {
     private static final Path AST_DIR = Paths.get("src/danex/ast");
@@ -62,10 +63,10 @@ public class AstBuilderGenerator {
         if (!isExpr && !isStmt) {
             return null;
         }
-        String ruleName = className; // e.g. "BinaryExpr", used directly in visit method
+        String ruleName = className; // e.g. "BinaryExpr"
 
         // Find constructor signature: public ClassName(Type param, ...)
-        Pattern ctorPattern = Pattern.compile("public\\s+" + className + "\\s*\([^)]*)\");
+        Pattern ctorPattern = Pattern.compile("public\\s+" + className + "\\s*\\(([^)]*)\\)");
         Matcher matcher = ctorPattern.matcher(content);
         List<Field> fields = new ArrayList<>();
         if (matcher.find()) {
@@ -87,13 +88,13 @@ public class AstBuilderGenerator {
         } else {
             System.err.println("Warning: No constructor found in " + className);
         }
-        return new AstClass(className, ruleName, fields);
+        return new AstClass(className, fields);
     }
 
     private static String generateVisitorMethod(AstClass cls) {
         StringBuilder sb = new StringBuilder();
         String className = cls.className;           // e.g. "BinaryExpr"
-        String methodName = className;               // same name in visitor: visitBinaryExpr
+        String methodName = className;               // visitBinaryExpr
         sb.append("    @Override\n");
         sb.append("    public Object visit").append(methodName)
           .append("(DanexParser.").append(methodName).append("Context ctx) {\n");
@@ -147,9 +148,9 @@ public class AstBuilderGenerator {
     private static class AstClass {
         final String className;
         final List<Field> fields;
-        AstClass(String className, String ruleName, List<Field> fields) {
+        AstClass(String className, List<Field> fields) {
             this.className = className;
             this.fields = fields;
         }
     }
-            }
+}
