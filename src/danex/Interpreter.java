@@ -1,7 +1,7 @@
 package danex;
 
-import danex.ast.;
-import java.util.;
+import danex.ast.*;
+import java.util.*;
 
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, Decl.Visitor<Void> {
 private Environment globals = new Environment();
