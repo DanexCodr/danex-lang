@@ -8,7 +8,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write  # Needed for pushing changes
+  contents: write  # Allow auto-commit
 
 jobs:
   build-antlr:
@@ -29,7 +29,7 @@ jobs:
           mkdir -p lib
           curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
 
-      - name: Generate ANTLR lexer and parser to src/danex/grammar
+      - name: Generate lexer and parser
         run: |
           mkdir -p src/danex/grammar
 
@@ -40,6 +40,9 @@ jobs:
             -o src/danex/grammar \
             grammar/DanexLexer.g4
 
+          echo "Moving DanexLexer.tokens to grammar/..."
+          mv src/danex/grammar/DanexLexer.tokens grammar/
+
           echo "Generating DanexParser..."
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
@@ -49,18 +52,15 @@ jobs:
             -lib grammar \
             grammar/DanexParser.g4
 
-          echo "Removing copied tokens..."
-          rm grammar/DanexLexer.tokens
-
-      - name: Confirm generated files
+      - name: List generated files
         run: |
           echo "Generated files:"
           find src/danex/grammar -type f
 
-      - name: Commit and push generated files
+      - name: Commit and push changes
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
+          git config user.name "antlr-bot"
+          git config user.email "actions@github.com"
           git add src/danex/grammar
-          git commit -m "Auto-generate ANTLR parser and lexer" || echo "No changes to commit"
+          git commit -m "Auto-generated ANTLR parser and lexer" || echo "No changes to commit"
           git push
