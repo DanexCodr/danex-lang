@@ -19,20 +19,34 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Ensure src/danex directory exists
+        run: mkdir -p src/danex
+
       - name: Compile AstBuilderGenerator
         run: |
+          mkdir -p bin
           javac -d bin tools/AstBuilderGenerator.java
 
       - name: Run AstBuilderGenerator
         run: |
           java -cp bin tools.AstBuilderGenerator
 
+      - name: Debug: list src/danex contents
+        run: |
+          echo "Contents of src/danex/:"
+          ls -R src/danex || echo "src/danex/ not found"
+
+      - name: Compile generated AstBuilder
+        run: |
+          mkdir -p bin
+          javac -cp "lib/antlr-4.9.2-complete.jar:lib/danex-parser.jar" -d bin src/danex/AstBuilder.java || exit 1
+
       - name: Commit generated AstBuilder
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add src/danex/AstBuilder.java
-          git commit -m "chore: Generate AstBuilder.java [skip ci]"
+          git commit -m "chore: Generate AstBuilder.java [skip ci]" || echo "No changes to commit"
           git push
 
       - name: Cleanup workflow (optional self-delete)
