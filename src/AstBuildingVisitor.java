@@ -130,8 +130,11 @@ private Decl buildMethod(DanexParser.MethodDeclContext ctx) {
     Stmt bodyStmt = buildMethodBody(name, resultName, ctx.methodBody());
 
     MethodDecl methodNode = new MethodDecl(name, resultType, resultName, annotations, modifiers, params, bodyStmt);
-    return builder.visitMethodDecl(methodNode);
+    MethodDecl built = (MethodDecl) builder.visitMethodDecl(methodNode);
+if (built == null || built.name == null) {
+    throw new RuntimeException("builder.visitMethodDecl() returned null or invalid MethodDecl");
 }
+return built;}
 
 /**
  * Helper for TopLevelMethodDeclContext.
@@ -154,7 +157,11 @@ private Decl buildTopLevelMethod(DanexParser.TopLevelMethodDeclContext ctx) {
     Stmt bodyStmt = buildMethodBody(name, resultName, ctx.methodBody());
 
     MethodDecl methodNode = new MethodDecl(name, resultType, resultName, annotations, modifiers, params, bodyStmt);
-    return builder.visitMethodDecl(methodNode);
+    MethodDecl built = (MethodDecl) builder.visitMethodDecl(methodNode);
+if (built == null || built.name == null) {
+    throw new RuntimeException("builder.visitMethodDecl() returned null or invalid MethodDecl");
+}
+return built;
 }
 
 /**
