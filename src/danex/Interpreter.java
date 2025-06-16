@@ -292,4 +292,20 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
         return null;
     }
 
+    @Override
+    public Void visitResourceDecl(ResourceDecl rd) {
+        // handle try-with-resources or ignore
+        return null;
+    }
+
+    @Override
+    public Void visitParam(Param param) {
+        return null;
+    }
+
+    @Override
+    public Void visitAnnotation(Annotation annotation) {
+        return null;
+    }
+    
 }
