@@ -1,10 +1,13 @@
-// === AstBuilderGenerator.java ===
 package tools;
 
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
 
+/**
+ * Generates AstBuilder.java with visitor methods for all AST nodes,
+ * and also includes manual overrides for Annotation, Param, ResourceDecl, ExprStmt, etc.
+ */
 public class AstBuilderGenerator {
     private static final Path AST_DIR = Paths.get("src/danex/ast");
     private static final Path OUTPUT_FILE = Paths.get("src/danex/AstBuilder.java");
@@ -34,13 +37,48 @@ public class AstBuilderGenerator {
             sb.append("package danex;\n\n");
             sb.append("import danex.ast.*;\n");
             sb.append("import java.util.*;\n\n");
-            // Implement Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.Visitor<Decl>
             sb.append("public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.Visitor<Decl> {\n\n");
 
+            // 1) Auto-generate visitor methods for each AST node class
             for (AstClass cls : astClasses) {
-                if (cls.className.equals("Expr") || cls.className.equals("Stmt") || cls.className.equals("Decl")) continue;
+                // Skip base classes
+                if (cls.className.equals("Expr") || cls.className.equals("Stmt") || cls.className.equals("Decl")) {
+                    continue;
+                }
                 sb.append(generateVisitorMethod(cls)).append("\n");
             }
+
+            // 2) Append the manual overrides
+            sb.append("    // === Manual overrides for certain AST node types ===\n\n");
+            sb.append("    @Override\n");
+            sb.append("    public Annotation visitAnnotation(Annotation annotation) {\n");
+            sb.append("        // Return a new Annotation or process children if needed\n");
+            sb.append("        return new Annotation(annotation.name);\n");
+            sb.append("    }\n\n");
+            sb.append("    @Override\n");
+            sb.append("    public Param visitParam(Param param) {\n");
+            sb.append("        // Return a new Param or process children if needed\n");
+            sb.append("        return new Param(param.type, param.name, param.varargs);\n");
+            sb.append("    }\n\n");
+            sb.append("    @Override\n");
+            sb.append("    public ResourceDecl visitResourceDecl(ResourceDecl rd) {\n");
+            sb.append("        // Visit initializer expression\n");
+            sb.append("        Expr init = rd.initializer.accept(this);\n");
+            sb.append("        return new ResourceDecl(rd.type, rd.name, init);\n");
+            sb.append("    }\n\n");
+            sb.append("    @Override\n");
+            sb.append("    public ExprStmt visitExprStmt(ExprStmt stmt) {\n");
+            sb.append("        // Visit inner expression\n");
+            sb.append("        Expr e = stmt.expression.accept(this);\n");
+            sb.append("        return new ExprStmt(e);\n");
+            sb.append("    }\n\n");
+            sb.append("    // If your AST uses ExpressionStmt instead of ExprStmt, uncomment below:\n");
+            sb.append("    // @Override\n");
+            sb.append("    // public ExpressionStmt visitExpressionStmt(ExpressionStmt stmt) {\n");
+            sb.append("    //     Expr e = stmt.expression.accept(this);\n");
+            sb.append("    //     return new ExpressionStmt(e);\n");
+            sb.append("    // }\n\n");
+            sb.append("    // Add further manual overrides here if needed.\n");
 
             sb.append("}\n");
 
@@ -54,6 +92,7 @@ public class AstBuilderGenerator {
         }
     }
 
+    /** Parse a Java file under src/danex/ast to detect AST node class names. */
     private static AstClass parseAstClass(Path path) throws IOException {
         List<String> lines = Files.readAllLines(path);
         String fileName = path.getFileName().toString();
@@ -73,23 +112,30 @@ public class AstBuilderGenerator {
                 if (lastSpace != -1) {
                     String type = decl.substring(0, lastSpace).trim();
                     String name = decl.substring(lastSpace + 1).trim();
-                    if (!type.isEmpty() && !name.isEmpty()) fields.add(new Field(type, name));
+                    if (!type.isEmpty() && !name.isEmpty()) {
+                        fields.add(new Field(type, name));
+                    }
                 }
             }
         }
-        if (fields.isEmpty()) System.err.println("Warning: No public final fields found in " + className);
+        if (fields.isEmpty()) {
+            System.err.println("Warning: No public final fields found in " + className);
+        }
         return new AstClass(className, isExpr, isStmt, isDecl, fields);
     }
 
+    /** Generate a visitor method stub for a given AST class. */
     private static String generateVisitorMethod(AstClass cls) {
         StringBuilder sb = new StringBuilder();
         String className = cls.className;
         String paramName = Character.toLowerCase(className.charAt(0)) + className.substring(1);
         String returnType = cls.isExpr ? "Expr" : (cls.isStmt ? "Stmt" : "Decl");
+
         sb.append("    @Override\n");
         sb.append("    public ").append(returnType)
           .append(" visit").append(className)
           .append("(").append(className).append(" ").append(paramName).append(") {\n");
+        // Extract fields and reconstruct a new node:
         List<String> argNames = new ArrayList<>();
         for (Field f : cls.fields) {
             sb.append("        ").append(f.type).append(" ").append(f.name)
@@ -105,7 +151,10 @@ public class AstBuilderGenerator {
     private static class Field {
         final String type;
         final String name;
-        Field(String type, String name) { this.type = type; this.name = name; }
+        Field(String type, String name) {
+            this.type = type;
+            this.name = name;
+        }
     }
 
     private static class AstClass {
