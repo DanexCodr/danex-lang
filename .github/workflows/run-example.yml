@@ -73,4 +73,4 @@ jobs:
 
       - name: Run DanexLang example
         run: |
-          java -cp "bin:lib/antlr-4.9.2-complete.jar" Main example/Hello.danex
+          java -cp "bin:lib/antlr-4.9.2-complete.jar" danex.Main example/Hello.danex
