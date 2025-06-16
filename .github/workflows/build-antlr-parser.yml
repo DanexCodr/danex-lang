@@ -40,9 +40,6 @@ jobs:
             -o src/danex/grammar \
             grammar/DanexLexer.g4
 
-          echo "Copying DanexLexer.tokens to grammar/"
-          cp src/danex/grammar/DanexLexer.tokens grammar/
-
           echo "Generating DanexParser..."
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
