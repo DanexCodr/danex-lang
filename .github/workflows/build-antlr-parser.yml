@@ -1,4 +1,4 @@
-name: Build ANTLR Parser (no jar, no compile)
+name: Build ANTLR Parser
 
 on:
   push:
@@ -51,6 +51,9 @@ jobs:
             -o src/danex/parser \
             -lib grammar \
             grammar/DanexParser.g4
+
+          echo "Removing DanexLexer.tokens..."
+          rm -f DanexLexer.tokens
 
       - name: Confirm generated files
         run: |
