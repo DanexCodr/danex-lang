@@ -1,0 +1,89 @@
+# .github/workflows/build-antlr-parser.yml
+name: Build ANTLR Parser (artifact only)
+
+on:
+  push:
+    paths:
+      - 'grammar/**'
+      - 'tools/AstGenerator.java'       # If grammar or tools affecting parser change
+      - '.github/workflows/build-antlr-parser.yml'
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build-antlr:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Cache ANTLR runtime JAR
+        uses: actions/cache@v3
+        with:
+          path: lib/antlr-4.9.2-complete.jar
+          key: antlr-runtime-v4.9.2
+
+      - name: Ensure ANTLR runtime JAR present
+        run: |
+          mkdir -p lib
+          if [ ! -f lib/antlr-4.9.2-complete.jar ]; then
+            echo "Downloading ANTLR runtime..."
+            curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
+          else
+            echo "Using cached ANTLR runtime."
+          fi
+
+      - name: Generate ANTLR Lexer & Parser sources
+        run: |
+          mkdir -p src/generated
+          # Lexer
+          java -jar lib/antlr-4.9.2-complete.jar \
+            -Dlanguage=Java \
+            -o src/generated \
+            -package danex.antlr \
+            grammar/DanexLexer.g4
+          # Copy tokens if needed (if grammar references tokens file)
+          if [ -f src/generated/grammar/DanexLexer.tokens ]; then
+            cp src/generated/grammar/DanexLexer.tokens src/generated/
+          fi
+          # Parser
+          java -jar lib/antlr-4.9.2-complete.jar \
+            -Dlanguage=Java \
+            -o src/generated \
+            -package danex.antlr \
+            -lib src/generated \
+            grammar/DanexParser.g4
+
+      - name: Compile ANTLR-generated sources
+        run: |
+          find src/generated -name "*.java" > sources.txt
+          if [ ! -s sources.txt ]; then
+            echo "❌ No ANTLR-generated Java files found."
+            exit 1
+          fi
+          javac -cp lib/antlr-4.9.2-complete.jar -d bin @sources.txt
+
+      - name: Package parser JAR artifact
+        run: |
+          jar cf danex-parser.jar -C bin .
+      - name: Upload parser JAR artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: danex-parser
+          path: danex-parser.jar
+
+      # No git commit/push in this workflow.
+      # Consumers (e.g., other workflows) can download this artifact if run in the same workflow,
+      # but cross-workflow artifact sharing is not automatically available.
+      # Instead, subsequent workflows will regenerate parser sources themselves if needed.
