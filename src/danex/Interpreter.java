@@ -6,6 +6,27 @@ import java.util.*;
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, Decl.Visitor<Void> {
     private Environment globals = new Environment();
     private Environment environment = globals;
+
+public Interpreter() {
+    setupBuiltins();
+}
+
+    private void setupBuiltins() {
+       globals.define("print", new DanexCallable() {
+    @Override
+    public Object call(Interpreter interpreter, List<Object> args) {
+        for (Object arg : args) {
+            System.out.println(arg);
+        }
+        return null;
+    }
+
+    @Override
+    public String toString() {
+        return "<builtin fn print>";
+    }
+}); 
+    }
     
     public void interpret(List<Stmt> statements) {
         try {
