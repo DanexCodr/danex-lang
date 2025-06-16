@@ -19,6 +19,12 @@ public class Environment {
         values.put(name, value);
     }
 
+    public boolean contains(String name) {
+        if (values.containsKey(name)) return true;
+        if (parent != null) return parent.contains(name);
+        return false;
+    }
+
     public Object get(String name) {
         if (values.containsKey(name)) {
             return values.get(name);
