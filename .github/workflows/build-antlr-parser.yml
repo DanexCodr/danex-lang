@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - 'grammar/**'
-      - '.github/workflows/antlr-java.yml'
+      - '.github/workflows/build-antlr-java.yml'
     branches: [main]
 
 permissions:
