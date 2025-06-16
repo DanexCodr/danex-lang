@@ -6,12 +6,7 @@ import java.util.*;
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, Decl.Visitor<Void> {
     private Environment globals = new Environment();
     private Environment environment = globals;
-
-    private static class Return extends RuntimeException {
-        final Object value;
-        Return(Object value) { super(null, null, false, false); this.value = value; }
-    }
-
+    
     public void interpret(List<Stmt> statements) {
         try {
             for (Stmt stmt : statements) execute(stmt);
@@ -186,6 +181,13 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
         throw new RuntimeError("Try-expression not supported yet.");
     }
 
+@Override
+public Void visitAssignStmt(AssignStmt stmt) {
+    Object value = evaluate(stmt.expr);
+    environment.assign(stmt.name, value);
+    return null;
+}
+    
     @Override
     public Void visitExprStmt(ExprStmt exprStmt) {
         evaluate(exprStmt.expression);
