@@ -1,4 +1,3 @@
-# .github/workflows/generate-all.yml
 name: Generate AST, AstBuilder, Interpreter
 
 on:
@@ -29,6 +28,29 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: '17'
+
+      - name: Check for required files
+        run: |
+          REQUIRED=(
+            grammar/DanexLexer.g4
+            grammar/DanexParser.g4
+            tools/AstGenerator.java
+            tools/AstBuilderGenerator.java
+            tools/InterpreterTemplateGenerator.java
+          )
+
+          MISSING=0
+          for file in "${REQUIRED[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Missing required file: $file"
+              MISSING=1
+            fi
+          done
+
+          if [ $MISSING -eq 1 ]; then
+            echo "❌ Aborting due to missing required files."
+            exit 1
+          fi
 
       - name: Cache ANTLR runtime JAR
         uses: actions/cache@v3
