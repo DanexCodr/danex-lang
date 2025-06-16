@@ -37,7 +37,7 @@ public class Main {
         interpreter.interpretDecls(programDecls);
 
         // ✅ Run main() automatically
-        DanexCallable mainFn = (DanexCallable) interpreter.globals.get("main");
+        DanexCallable mainFn = (DanexCallable) interpreter.getGlobals().get("main");
         mainFn.call(interpreter, new java.util.ArrayList<>());
     }
 }
