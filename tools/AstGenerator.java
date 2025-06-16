@@ -1,4 +1,3 @@
-// === AstGenerator.java ===.
 package tools;
 
 import java.io.BufferedWriter;
@@ -10,22 +9,19 @@ import java.util.*;
 
 // Generates AST node classes in src/danex/ast
 public class AstGenerator {
-    // Output directory for generated AST .java files
     private static final String OUTPUT_DIR = "src/danex/ast";
 
     public static void main(String[] args) throws IOException {
-        // Ensure output directory exists
         Path outDir = Paths.get(OUTPUT_DIR);
         if (!Files.exists(outDir)) {
             Files.createDirectories(outDir);
         }
-        // Base classes
+
         generateASTNode();
         generateExprBase();
         generateStmtBase();
         generateDeclBase();
 
-        // Expression subclasses
         List<NodeDef> exprNodes = Arrays.asList(
             new NodeDef("BinaryExpr", Arrays.asList("Expr left", "String operator", "Expr right")),
             new NodeDef("UnaryExpr", Arrays.asList("String operator", "Expr right")),
@@ -36,23 +32,16 @@ public class AstGenerator {
             new NodeDef("CallExpr", Arrays.asList("Expr callee", "List<Expr> arguments")),
             new NodeDef("LambdaExpr", Arrays.asList("List<Param> params", "Expr body")),
             new NodeDef("DoExpr", Arrays.asList("List<Stmt> body")),
-            // TryExpr: no resources in expression context
             new NodeDef("TryExpr", Arrays.asList(
-                "List<Stmt> tryBlock",
-                "String catchType",
-                "String catchName",
-                "List<Stmt> catchBlock",
-                "List<Stmt> finallyBlock"
+                "List<Stmt> tryBlock", "String catchType", "String catchName",
+                "List<Stmt> catchBlock", "List<Stmt> finallyBlock"
             )),
             new NodeDef("AwaitExpr", Arrays.asList("Expr expression")),
             new NodeDef("NullCoalesceExpr", Arrays.asList("Expr left", "Expr right")),
             new NodeDef("ComparatorExpr", Arrays.asList("Expr left", "Expr right"))
         );
-        for (NodeDef nd : exprNodes) {
-            generateExprSubclass(nd);
-        }
+        for (NodeDef nd : exprNodes) generateExprSubclass(nd);
 
-        // Statement subclasses
         List<NodeDef> stmtNodes = Arrays.asList(
             new NodeDef("ExprStmt", Arrays.asList("Expr expression")),
             new NodeDef("BlockStmt", Arrays.asList("List<Stmt> statements")),
@@ -60,10 +49,9 @@ public class AstGenerator {
             new NodeDef("WhileStmt", Arrays.asList("Expr condition", "Stmt body")),
             new NodeDef("DoWhileStmt", Arrays.asList("Stmt body", "Expr condition")),
             new NodeDef("ForStmt", Arrays.asList("Stmt init", "Expr condition", "Expr update", "Stmt body")),
-            new NodeDef("ReturnStmt", Arrays.asList("Expr value")),
+            new NodeDef("AssignStmt", Arrays.asList("Expr target", "Expr value")),
             new NodeDef("ThrowStmt", Arrays.asList("Expr exception")),
             new NodeDef("ExitStmt", Collections.emptyList()),
-            // TryStmt: include resources, catch, finally
             new NodeDef("TryStmt", Arrays.asList(
                 "List<ResourceDecl> resources",
                 "List<Stmt> tryBlock",
@@ -73,49 +61,31 @@ public class AstGenerator {
                 "List<Stmt> finallyBlock"
             ))
         );
-        for (NodeDef nd : stmtNodes) {
-            generateStmtSubclass(nd);
-        }
+        for (NodeDef nd : stmtNodes) generateStmtSubclass(nd);
 
-        // Declaration subclasses
         List<NodeDef> declNodes = Arrays.asList(
-            // MethodDecl: name, return type, optional result variable name, annotations, modifiers, params, and body
             new NodeDef("MethodDecl", Arrays.asList(
-                "String name",
-                "String resultType",
-                "String resultName",
-                "List<Annotation> annotations",
-                "List<String> modifiers",
-                "List<Param> params",
-                "Stmt body"
+                "String name", "String resultType", "String resultName",
+                "List<Annotation> annotations", "List<String> modifiers",
+                "List<Param> params", "Stmt body"
             )),
-            // ClassDecl: nested declarations inside a class
             new NodeDef("ClassDecl", Arrays.asList(
-                "String name",
-                "List<Annotation> annotations",
-                "List<String> modifiers",
-                "List<Decl> members"
+                "String name", "List<Annotation> annotations",
+                "List<String> modifiers", "List<Decl> members"
             )),
-            // ImportDecl: moduleName, alias
             new NodeDef("ImportDecl", Arrays.asList("String moduleName", "String alias")),
-            // Annotation node
             new NodeDef("Annotation", Arrays.asList("String name")),
-            // Param node: type, name, varargs flag
             new NodeDef("Param", Arrays.asList("String type", "String name", "boolean varargs")),
-            // ResourceDecl node
             new NodeDef("ResourceDecl", Arrays.asList("String type", "String name", "Expr initializer"))
         );
-        for (NodeDef nd : declNodes) {
-            generateDeclSubclass(nd);
-        }
+        for (NodeDef nd : declNodes) generateDeclSubclass(nd);
 
         System.out.println("AST classes generated in " + OUTPUT_DIR);
     }
 
-    // Represents a node name and its fields: "Type name"
     static class NodeDef {
         String className;
-        List<String> fields; // each like "Type name"
+        List<String> fields;
         NodeDef(String className, List<String> fields) {
             this.className = className;
             this.fields = fields;
@@ -124,177 +94,112 @@ public class AstGenerator {
 
     private static void generateASTNode() throws IOException {
         String pkg = "danex.ast";
-        String className = "ASTNode";
-        Path file = Paths.get(OUTPUT_DIR, className + ".java");
+        Path file = Paths.get(OUTPUT_DIR, "ASTNode.java");
         try (BufferedWriter w = Files.newBufferedWriter(file)) {
-            w.write("package " + pkg + ";"); w.newLine(); w.newLine();
-            w.write("public abstract class " + className + " {"); w.newLine();
-            w.write("    // Base for all AST nodes. You may add common info like source position."); w.newLine();
-            w.write("}"); w.newLine();
+            w.write("package " + pkg + ";\n\n");
+            w.write("public abstract class ASTNode {\n");
+            w.write("    // Base for all AST nodes. You may add common info like source position.\n");
+            w.write("}\n");
         }
     }
 
     private static void generateExprBase() throws IOException {
         String pkg = "danex.ast";
-        String className = "Expr";
-        Path file = Paths.get(OUTPUT_DIR, className + ".java");
+        Path file = Paths.get(OUTPUT_DIR, "Expr.java");
         String[] concreteExprs = {
-            "BinaryExpr","UnaryExpr","LiteralExpr","GroupingExpr","VariableExpr","AssignExpr",
-            "CallExpr","LambdaExpr","DoExpr","TryExpr","AwaitExpr","NullCoalesceExpr","ComparatorExpr"
+            "BinaryExpr", "UnaryExpr", "LiteralExpr", "GroupingExpr", "VariableExpr", "AssignExpr",
+            "CallExpr", "LambdaExpr", "DoExpr", "TryExpr", "AwaitExpr", "NullCoalesceExpr", "ComparatorExpr"
         };
         try (BufferedWriter w = Files.newBufferedWriter(file)) {
-            w.write("package " + pkg + ";"); w.newLine(); w.newLine();
-            w.write("public abstract class " + className + " extends ASTNode {"); w.newLine();
-            w.write("    public interface Visitor<R> {"); w.newLine();
-            for (String ce : concreteExprs) {
-                w.write("        R visit" + ce + "(" + ce + " " + decap(ce) + ");"); w.newLine();
+            w.write("package " + pkg + ";\n\n");
+            w.write("public abstract class Expr extends ASTNode {\n");
+            w.write("    public interface Visitor<R> {\n");
+            for (String name : concreteExprs) {
+                w.write("        R visit" + name + "(" + name + " " + decap(name) + ");\n");
             }
-            w.write("    }"); w.newLine(); w.newLine();
-            w.write("    public abstract <R> R accept(Visitor<R> visitor);"); w.newLine();
-            w.write("}"); w.newLine();
+            w.write("    }\n\n");
+            w.write("    public abstract <R> R accept(Visitor<R> visitor);\n");
+            w.write("}\n");
         }
     }
 
     private static void generateStmtBase() throws IOException {
         String pkg = "danex.ast";
-        String className = "Stmt";
-        Path file = Paths.get(OUTPUT_DIR, className + ".java");
+        Path file = Paths.get(OUTPUT_DIR, "Stmt.java");
         String[] concreteStmts = {
-            "ExprStmt","BlockStmt","IfStmt","WhileStmt","DoWhileStmt","ForStmt",
-            "ReturnStmt","ThrowStmt","ExitStmt","TryStmt"
+            "ExprStmt", "BlockStmt", "IfStmt", "WhileStmt", "DoWhileStmt", "ForStmt",
+            "AssignStmt", "ThrowStmt", "ExitStmt", "TryStmt"
         };
         try (BufferedWriter w = Files.newBufferedWriter(file)) {
-            w.write("package " + pkg + ";"); w.newLine(); w.newLine();
-            w.write("public abstract class " + className + " extends ASTNode {"); w.newLine();
-            w.write("    public interface Visitor<R> {"); w.newLine();
-            for (String cs : concreteStmts) {
-                w.write("        R visit" + cs + "(" + cs + " " + decap(cs) + ");"); w.newLine();
+            w.write("package " + pkg + ";\n\n");
+            w.write("public abstract class Stmt extends ASTNode {\n");
+            w.write("    public interface Visitor<R> {\n");
+            for (String name : concreteStmts) {
+                w.write("        R visit" + name + "(" + name + " " + decap(name) + ");\n");
             }
-            w.write("    }"); w.newLine(); w.newLine();
-            w.write("    public abstract <R> R accept(Visitor<R> visitor);"); w.newLine();
-            w.write("}"); w.newLine();
+            w.write("    }\n\n");
+            w.write("    public abstract <R> R accept(Visitor<R> visitor);\n");
+            w.write("}\n");
         }
     }
 
     private static void generateDeclBase() throws IOException {
         String pkg = "danex.ast";
-        String className = "Decl";
-        Path file = Paths.get(OUTPUT_DIR, className + ".java");
+        Path file = Paths.get(OUTPUT_DIR, "Decl.java");
         try (BufferedWriter w = Files.newBufferedWriter(file)) {
-            w.write("package " + pkg + ";"); w.newLine(); w.newLine();
-            w.write("public abstract class " + className + " extends ASTNode {"); w.newLine();
-            w.write("    public interface Visitor<R> {"); w.newLine();
-            w.write("        R visitMethodDecl(MethodDecl methodDecl);"); w.newLine();
-            w.write("        R visitClassDecl(ClassDecl classDecl);"); w.newLine();
-            w.write("        R visitImportDecl(ImportDecl importDecl);"); w.newLine();
-            w.write("        R visitAnnotation(Annotation annotation);"); w.newLine();
-            w.write("        R visitParam(Param param);"); w.newLine();
-            w.write("        R visitResourceDecl(ResourceDecl resourceDecl);"); w.newLine();
-            w.write("    }"); w.newLine(); w.newLine();
-            w.write("    public abstract <R> R accept(Visitor<R> visitor);"); w.newLine();
-            w.write("}"); w.newLine();
+            w.write("package " + pkg + ";\n\n");
+            w.write("public abstract class Decl extends ASTNode {\n");
+            w.write("    public interface Visitor<R> {\n");
+            w.write("        R visitMethodDecl(MethodDecl methodDecl);\n");
+            w.write("        R visitClassDecl(ClassDecl classDecl);\n");
+            w.write("        R visitImportDecl(ImportDecl importDecl);\n");
+            w.write("        R visitAnnotation(Annotation annotation);\n");
+            w.write("        R visitParam(Param param);\n");
+            w.write("        R visitResourceDecl(ResourceDecl resourceDecl);\n");
+            w.write("    }\n\n");
+            w.write("    public abstract <R> R accept(Visitor<R> visitor);\n");
+            w.write("}\n");
         }
     }
 
     private static void generateExprSubclass(NodeDef nd) throws IOException {
-        String pkg = "danex.ast";
-        Path file = Paths.get(OUTPUT_DIR, nd.className + ".java");
-        try (BufferedWriter w = Files.newBufferedWriter(file)) {
-            w.write("package " + pkg + ";"); w.newLine(); w.newLine();
-            w.write("import java.util.*;"); w.newLine();
-            w.write("public class " + nd.className + " extends Expr {"); w.newLine();
-            // Fields
-            for (String field : nd.fields) {
-                w.write("    public final " + field + ";"); w.newLine();
-            }
-            w.newLine();
-            // Constructor
-            w.write("    public " + nd.className + "(");
-            for (int i = 0; i < nd.fields.size(); i++) {
-                String f = nd.fields.get(i);
-                w.write(f);
-                if (i < nd.fields.size() - 1) w.write(", ");
-            }
-            w.write(") {"); w.newLine();
-            for (String field : nd.fields) {
-                String name = field.split(" ")[1];
-                w.write("        this." + name + " = " + name + ";"); w.newLine();
-            }
-            w.write("    }"); w.newLine(); w.newLine();
-            // accept method
-            w.write("    @Override"); w.newLine();
-            w.write("    public <R> R accept(Visitor<R> visitor) {"); w.newLine();
-            w.write("        return visitor.visit" + nd.className + "(this);"); w.newLine();
-            w.write("    }"); w.newLine();
-            w.write("}"); w.newLine();
-        }
+        writeNodeFile(nd, "Expr");
     }
 
     private static void generateStmtSubclass(NodeDef nd) throws IOException {
-        String pkg = "danex.ast";
-        Path file = Paths.get(OUTPUT_DIR, nd.className + ".java");
-        try (BufferedWriter w = Files.newBufferedWriter(file)) {
-            w.write("package " + pkg + ";"); w.newLine(); w.newLine();
-            w.write("import java.util.*;"); w.newLine();
-            w.write("public class " + nd.className + " extends Stmt {"); w.newLine();
-            // Fields
-            for (String field : nd.fields) {
-                w.write("    public final " + field + ";"); w.newLine();
-            }
-            w.newLine();
-            // Constructor
-            w.write("    public " + nd.className + "(");
-            for (int i = 0; i < nd.fields.size(); i++) {
-                String f = nd.fields.get(i);
-                w.write(f);
-                if (i < nd.fields.size() - 1) w.write(", ");
-            }
-            w.write(") {"); w.newLine();
-            for (String field : nd.fields) {
-                String name = field.split(" ")[1];
-                w.write("        this." + name + " = " + name + ";"); w.newLine();
-            }
-            w.write("    }"); w.newLine(); w.newLine();
-            // accept method
-            w.write("    @Override"); w.newLine();
-            w.write("    public <R> R accept(Visitor<R> visitor) {"); w.newLine();
-            w.write("        return visitor.visit" + nd.className + "(this);"); w.newLine();
-            w.write("    }"); w.newLine();
-            w.write("}"); w.newLine();
-        }
+        writeNodeFile(nd, "Stmt");
     }
 
     private static void generateDeclSubclass(NodeDef nd) throws IOException {
+        writeNodeFile(nd, "Decl");
+    }
+
+    private static void writeNodeFile(NodeDef nd, String baseClass) throws IOException {
         String pkg = "danex.ast";
         Path file = Paths.get(OUTPUT_DIR, nd.className + ".java");
         try (BufferedWriter w = Files.newBufferedWriter(file)) {
-            w.write("package " + pkg + ";"); w.newLine(); w.newLine();
-            w.write("import java.util.*;"); w.newLine();
-            w.write("public class " + nd.className + " extends Decl {"); w.newLine();
-            // Fields
+            w.write("package " + pkg + ";\n\n");
+            w.write("import java.util.*;\n");
+            w.write("public class " + nd.className + " extends " + baseClass + " {\n");
             for (String field : nd.fields) {
-                w.write("    public final " + field + ";"); w.newLine();
+                w.write("    public final " + field + ";\n");
             }
-            w.newLine();
-            // Constructor
-            w.write("    public " + nd.className + "(");
+            w.write("\n    public " + nd.className + "(");
             for (int i = 0; i < nd.fields.size(); i++) {
-                String f = nd.fields.get(i);
-                w.write(f);
+                w.write(nd.fields.get(i));
                 if (i < nd.fields.size() - 1) w.write(", ");
             }
-            w.write(") {"); w.newLine();
+            w.write(") {\n");
             for (String field : nd.fields) {
                 String name = field.split(" ")[1];
-                w.write("        this." + name + " = " + name + ";"); w.newLine();
+                w.write("        this." + name + " = " + name + ";\n");
             }
-            w.write("    }"); w.newLine(); w.newLine();
-            // accept method
-            w.write("    @Override"); w.newLine();
-            w.write("    public <R> R accept(Visitor<R> visitor) {"); w.newLine();
-            w.write("        return visitor.visit" + nd.className + "(this);"); w.newLine();
-            w.write("    }"); w.newLine();
-            w.write("}"); w.newLine();
+            w.write("    }\n\n");
+            w.write("    @Override\n");
+            w.write("    public <R> R accept(" + baseClass + ".Visitor<R> visitor) {\n");
+            w.write("        return visitor.visit" + nd.className + "(this);\n");
+            w.write("    }\n");
+            w.write("}\n");
         }
     }
 
