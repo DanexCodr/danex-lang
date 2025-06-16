@@ -8,7 +8,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-antlr:
@@ -31,27 +31,24 @@ jobs:
 
       - name: Generate ANTLR lexer and parser to src/danex/parser
         run: |
-          mkdir -p src/danex/parser
+          mkdir -p src/danex
 
           echo "Generating DanexLexer..."
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -package danex.parser \
-            -o src/danex/parser \
+            -o src/danex \
             grammar/DanexLexer.g4
 
-          echo "Checking for DanexLexer.tokens:"
-          find . -name "DanexLexer.tokens"
-
           echo "Copying DanexLexer.tokens to grammar/..."
-          cp src/danex/parser/grammar/DanexLexer.tokens grammar/
+          cp src/danex/parser/DanexLexer.tokens grammar/
 
           echo "Generating DanexParser..."
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -visitor \
             -package danex.parser \
-            -o src/danex/parser \
+            -o src/danex \
             -lib grammar \
             grammar/DanexParser.g4
 
