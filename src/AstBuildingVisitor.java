@@ -4,10 +4,12 @@ import danex.grammar.DanexParserBaseVisitor;
 import danex.grammar.DanexParser;
 import danex.ast.*;
 
+import org.antlr.v4.runtime.tree.ParseTree;
+
 import java.util.*;
 import static java.util.stream.Collectors.toList;
 
-public class AstBuildingVisitor extends DanexBaseVisitor<Object> {
+public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
     private final AstBuilder builder;
 
     public AstBuildingVisitor(AstBuilder builder) {
@@ -22,7 +24,9 @@ public class AstBuildingVisitor extends DanexBaseVisitor<Object> {
 
     @Override
     public Object visitBlockStmt(DanexParser.BlockStmtContext ctx) {
-        List<Stmt> statements = ctx.statement().stream().map(s -> (Stmt) visit(s)).collect(toList());
+        List<Stmt> statements = ctx.statement().stream()
+            .map(s -> (Stmt) visit(s))
+            .collect(toList());
         return builder.visitBlockStmt(new BlockStmt(statements));
     }
 
@@ -79,15 +83,17 @@ public class AstBuildingVisitor extends DanexBaseVisitor<Object> {
         String name = ctx.IDENTIFIER().getText();
         List<String> params = ctx.parameters() != null
             ? ctx.parameters().IDENTIFIER().stream().map(ParseTree::getText).collect(toList())
-            : new ArrayList<>();
-        List<Stmt> body = ctx.block().statement().stream().map(s -> (Stmt) visit(s)).collect(toList());
+            : Collections.emptyList();
+        List<Stmt> body = ctx.block().statement().stream()
+            .map(s -> (Stmt) visit(s)).collect(toList());
         return builder.visitMethodStmt(new MethodStmt(name, params, body));
     }
 
     @Override
     public Object visitClassStmt(DanexParser.ClassStmtContext ctx) {
         String name = ctx.IDENTIFIER().getText();
-        List<Stmt> members = ctx.statement().stream().map(stmt -> (Stmt) visit(stmt)).collect(toList());
+        List<Stmt> members = ctx.statement().stream()
+            .map(stmt -> (Stmt) visit(stmt)).collect(toList());
         return builder.visitClassStmt(new ClassStmt(name, members));
     }
 
@@ -104,7 +110,7 @@ public class AstBuildingVisitor extends DanexBaseVisitor<Object> {
         List<Stmt> catchBlock = ctx.catchBlock.statement().stream().map(s -> (Stmt) visit(s)).collect(toList());
         List<Stmt> finallyBlock = ctx.finallyBlock != null
             ? ctx.finallyBlock.statement().stream().map(s -> (Stmt) visit(s)).collect(toList())
-            : new ArrayList<>();
+            : Collections.emptyList();
         return builder.visitTryStmt(new TryStmt(tryBlock, exceptionName, catchBlock, finallyBlock));
     }
 
@@ -117,12 +123,13 @@ public class AstBuildingVisitor extends DanexBaseVisitor<Object> {
 
     @Override
     public Object visitLiteralExpr(DanexParser.LiteralExprContext ctx) {
-        Object value = null;
-        if (ctx.STRING() != null) value = ctx.STRING().getText();
-        else if (ctx.NUMBER() != null) value = Double.parseDouble(ctx.NUMBER().getText());
-        else if (ctx.BOOL() != null) value = Boolean.parseBoolean(ctx.BOOL().getText());
-        else if (ctx.NULL() != null) value = null;
-        return builder.visitLiteralExpr(new LiteralExpr(value));
+        if (ctx.STRING() != null)
+            return builder.visitLiteralExpr(new LiteralExpr(ctx.STRING().getText()));
+        if (ctx.NUMBER() != null)
+            return builder.visitLiteralExpr(new LiteralExpr(Double.parseDouble(ctx.NUMBER().getText())));
+        if (ctx.BOOL() != null)
+            return builder.visitLiteralExpr(new LiteralExpr(Boolean.parseBoolean(ctx.BOOL().getText())));
+        return builder.visitLiteralExpr(new LiteralExpr(null)); // handles NULL case or fallback
     }
 
     @Override
@@ -157,7 +164,7 @@ public class AstBuildingVisitor extends DanexBaseVisitor<Object> {
         Expr callee = (Expr) visit(ctx.expression());
         List<Expr> args = ctx.arguments() != null
             ? ctx.arguments().expression().stream().map(e -> (Expr) visit(e)).collect(toList())
-            : new ArrayList<>();
+            : Collections.emptyList();
         return builder.visitCallExpr(new CallExpr(callee, args));
     }
 
@@ -170,7 +177,7 @@ public class AstBuildingVisitor extends DanexBaseVisitor<Object> {
     public Object visitLambdaExpr(DanexParser.LambdaExprContext ctx) {
         List<String> params = ctx.parameters() != null
             ? ctx.parameters().IDENTIFIER().stream().map(ParseTree::getText).collect(toList())
-            : new ArrayList<>();
+            : Collections.emptyList();
         Expr body = (Expr) visit(ctx.expression());
         return builder.visitLambdaExpr(new LambdaExpr(params, body));
     }
@@ -199,7 +206,8 @@ public class AstBuildingVisitor extends DanexBaseVisitor<Object> {
 
     @Override
     public Object visitDoExpr(DanexParser.DoExprContext ctx) {
-        List<Stmt> body = ctx.statement().stream().map(stmt -> (Stmt) visit(stmt)).collect(toList());
+        List<Stmt> body = ctx.statement().stream()
+            .map(stmt -> (Stmt) visit(stmt)).collect(toList());
         return builder.visitDoExpr(new DoExpr(body));
     }
 
@@ -209,4 +217,4 @@ public class AstBuildingVisitor extends DanexBaseVisitor<Object> {
         Expr right = (Expr) visit(ctx.right);
         return builder.visitComparatorExpr(new ComparatorExpr(left, right));
     }
-}
+            }
