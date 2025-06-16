@@ -1,11 +1,10 @@
-# .github/workflows/build-antlr-parser.yml
 name: Build ANTLR Parser (artifact only)
 
 on:
   push:
     paths:
       - 'grammar/**'
-      - 'tools/AstGenerator.java'       # If grammar or tools affecting parser change
+      - 'tools/AstGenerator.java'
       - '.github/workflows/build-antlr-parser.yml'
     branches: [main]
 
@@ -44,22 +43,27 @@ jobs:
             echo "Using cached ANTLR runtime."
           fi
 
-      - name: Generate ANTLR Lexer & Parser sources
+      - name: Generate ANTLR Lexer & Parser sources (with visitor support)
         run: |
           mkdir -p src/generated
-          # Lexer
+
+          # Generate Lexer
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
+            -visitor \
             -o src/generated \
             -package danex.antlr \
             grammar/DanexLexer.g4
-          # Copy tokens if needed (if grammar references tokens file)
+
+          # Copy tokens if generated
           if [ -f src/generated/grammar/DanexLexer.tokens ]; then
             cp src/generated/grammar/DanexLexer.tokens src/generated/
           fi
-          # Parser
+
+          # Generate Parser (with visitor)
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
+            -visitor \
             -o src/generated \
             -package danex.antlr \
             -lib src/generated \
@@ -77,13 +81,9 @@ jobs:
       - name: Package parser JAR artifact
         run: |
           jar cf danex-parser.jar -C bin .
+
       - name: Upload parser JAR artifact
         uses: actions/upload-artifact@v4
         with:
           name: danex-parser
           path: danex-parser.jar
-
-      # No git commit/push in this workflow.
-      # Consumers (e.g., other workflows) can download this artifact if run in the same workflow,
-      # but cross-workflow artifact sharing is not automatically available.
-      # Instead, subsequent workflows will regenerate parser sources themselves if needed.
