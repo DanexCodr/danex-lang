@@ -45,9 +45,7 @@ jobs:
             -package danex.antlr \
             -o src/generated \
             grammar/DanexLexer.g4
-
-          mv src/generated/DanexLexer.tokens grammar/
-
+          
           # Now generate the Parser using the tokens file
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
