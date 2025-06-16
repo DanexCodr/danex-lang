@@ -1,6 +1,6 @@
 package danex;
 
-import danex.grammar.DanexBaseVisitor;
+import danex.grammar.DanexParserBaseVisitor;
 import danex.grammar.DanexParser;
 import danex.ast.*;
 
