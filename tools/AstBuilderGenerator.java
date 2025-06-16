@@ -3,7 +3,6 @@ package tools;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.*;
-import java.util.regex.*;
 
 /**
  * Generates AstBuilder.java by scanning AST classes in src/danex/ast/.
@@ -75,39 +74,85 @@ public class AstBuilderGenerator {
             return null;
         }
 
-        // Find constructor signature: public ClassName(Type param, ...)
-        Pattern ctorPattern = Pattern.compile("public\\s+" + className + "\\s*\([^)]*)\");
-        Matcher matcher = ctorPattern.matcher(content);
-
         List<Field> fields = new ArrayList<>();
-        if (matcher.find()) {
-            String params = matcher.group(1).trim();
-            if (!params.isEmpty()) {
-                String[] parts = params.split(",");
-                for (String part : parts) {
-                    part = part.trim();
-                    String[] toks = part.split("\\s+");
-                    if (toks.length >= 2) {
-                        String type = toks[0];
-                        String name = toks[1];
-                        fields.add(new Field(type, name));
-                    } else {
-                        System.err.println("Warning: cannot parse constructor param '" + part +
+
+        // Find the constructor signature: look for "public ClassName("
+        String ctorKey = "public " + className + "(";
+        int idx = content.indexOf(ctorKey);
+        if (idx >= 0) {
+            int startParams = idx + ctorKey.length() - 1; // position at '('
+            int endParams = findMatchingParen(content, startParams);
+            if (endParams > startParams) {
+                String paramsContent = content.substring(startParams + 1, endParams).trim();
+                if (!paramsContent.isEmpty()) {
+                    // Split by commas, but be cautious: parameter types might have generics with commas?
+                    // For simplicity, assume types do not contain unbalanced commas (common case: List<Expr>, List<String>, etc.)
+                    // If you have more complex types (e.g., Map<String, List<Expr>>), this naive split may break.
+                    String[] parts = paramsContent.split(",");
+                    for (String part : parts) {
+                        part = part.trim();
+                        if (part.isEmpty()) continue;
+                        // Expect "Type name" or possibly final/modifiers: ignore modifiers for now
+                        // Split on whitespace: last token is name, rest is type (including generics)
+                        String[] toks = part.split("\\s+");
+                        if (toks.length >= 2) {
+                            String name = toks[toks.length - 1];
+                            // Reconstruct type from the preceding tokens
+                            String type = toks[0];
+                            if (toks.length > 2) {
+                                // join tokens[0..length-2]
+                                StringBuilder typeSb = new StringBuilder(toks[0]);
+                                for (int i = 1; i < toks.length - 1; i++) {
+                                    typeSb.append(" ").append(toks[i]);
+                                }
+                                type = typeSb.toString();
+                            }
+                            fields.add(new Field(type, name));
+                        } else {
+                            System.err.println("Warning: cannot parse constructor param '" + part +
                                 "' in " + className);
+                        }
                     }
                 }
+            } else {
+                System.err.println("Warning: unmatched parenthesis for constructor in " + className);
             }
         } else {
             System.err.println("Warning: No constructor found in " + className);
         }
+
         return new AstClass(className, isExpr, isStmt, fields);
+    }
+
+    /**
+     * Find the index of the matching closing parenthesis for the '(' at position start.
+     * Returns the index of ')', or -1 if not found.
+     */
+    private static int findMatchingParen(String s, int start) {
+        if (start < 0 || start >= s.length() || s.charAt(start) != '(') {
+            return -1;
+        }
+        int depth = 0;
+        for (int i = start; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c == '(') {
+                depth++;
+            } else if (c == ')') {
+                depth--;
+                if (depth == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 
     /**
      * Generate the visitor method for one AST class.
      * E.g., for class BinaryExpr, generates:
-     *   @Override
-     *   public Object visitBinaryExpr(Expr.BinaryExpr binaryExpr) { ... }
+     *
+     * @Override
+     * public Object visitBinaryExpr(Expr.BinaryExpr binaryExpr) { ... }
      */
     private static String generateVisitorMethod(AstClass cls) {
         StringBuilder sb = new StringBuilder();
@@ -180,4 +225,4 @@ public class AstBuilderGenerator {
             this.fields = fields;
         }
     }
-                    }
+}
