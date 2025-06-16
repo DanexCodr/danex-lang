@@ -18,7 +18,7 @@ public class AstBuilderGenerator {
         "Param",
         "ResourceDecl",
         "ExprStmt"
-        // If you have other manually overridden nodes, add them here.
+        // Add others here if you later manually override more nodes
     );
 
     public static void main(String[] args) {
@@ -154,13 +154,11 @@ public class AstBuilderGenerator {
         sb.append("    public ").append(returnType)
           .append(" visit").append(className)
           .append("(").append(className).append(" ").append(paramName).append(") {\n");
-        // Extract fields and rebuild children via accept
+        // Extract fields and rebuild children via accept if desired
         List<String> argNames = new ArrayList<>();
         for (Field f : cls.fields) {
             sb.append("        ").append(f.type).append(" ").append(f.name)
               .append(" = ").append(paramName).append(".").append(f.name).append(";\n");
-            // For children that are AST nodes or lists of them, one may want to accept():
-            // But here, for simplicity, we reconstruct with raw fields.
             argNames.add(f.name);
         }
         sb.append("        return new ").append(className)
@@ -192,4 +190,4 @@ public class AstBuilderGenerator {
             this.fields = fields;
         }
     }
-                               }
+}
