@@ -189,7 +189,13 @@ public Void visitParam(Param param) {
 @Override
 public Void visitAssignStmt(AssignStmt stmt) {
     Object value = evaluate(stmt.value);
-    environment.assign(stmt.name, value);
+
+    if (!(stmt.target instanceof VariableExpr)) {
+        throw new RuntimeError("Invalid assignment target.");
+    }
+
+    String varName = ((VariableExpr) stmt.target).name;
+    environment.assign(varName, value);
     return null;
 }
     
