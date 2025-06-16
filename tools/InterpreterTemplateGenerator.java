@@ -1,4 +1,3 @@
-// tools/InterpreterTemplateGenerator.java
 package tools;
 
 import java.io.*;
@@ -18,8 +17,11 @@ public class InterpreterTemplateGenerator {
     };
     private static final String[] STMT_NODES = {
         "ExprStmt", "BlockStmt", "IfStmt", "WhileStmt", "DoWhileStmt",
-        "ForStmt", "ReturnStmt", "ThrowStmt", "ExitStmt", "TryStmt",
-        "ClassStmt", "MethodStmt", "ImportStmt"
+        "ForStmt", "ReturnStmt", "ThrowStmt", "ExitStmt", "TryStmt"
+        // Declarations removed from here
+    };
+    private static final String[] DECL_NODES = {
+        "ClassDecl", "MethodDecl", "ImportDecl"
     };
 
     public static void main(String[] args) throws IOException {
@@ -33,6 +35,7 @@ public class InterpreterTemplateGenerator {
             writeHelpers(w);
             writeExprVisitorMethods(w);
             writeStmtVisitorMethods(w);
+            writeDeclVisitorMethods(w);
             w.write("}\n");
         }
         System.out.println("Generated Interpreter.java in " + file.toString());
@@ -42,7 +45,8 @@ public class InterpreterTemplateGenerator {
         w.write("package " + PACKAGE_NAME + ";\n\n");
         w.write("import danex.ast.*;\n");
         w.write("import java.util.*;\n\n");
-        w.write("public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {\n");
+        // Implement three visitor interfaces
+        w.write("public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, Decl.Visitor<Void> {\n");
         // Environment and Return exception
         w.write("    private Environment globals = new Environment();\n");
         w.write("    private Environment environment = globals;\n\n");
@@ -56,6 +60,13 @@ public class InterpreterTemplateGenerator {
         w.write("            for (Stmt stmt : statements) execute(stmt);\n");
         w.write("        } catch (RuntimeError error) {\n");
         w.write("            System.err.println(\"Runtime error: \" + error.getMessage());\n");
+        w.write("        }\n");
+        w.write("    }\n\n");
+        w.write("    public void interpretDecls(List<Decl> decls) {\n");
+        w.write("        try {\n");
+        w.write("            for (Decl decl : decls) decl.accept(this);\n");
+        w.write("        } catch (RuntimeError error) {\n");
+        w.write("            System.err.println(\"Runtime error in declaration: \" + error.getMessage());\n");
         w.write("        }\n");
         w.write("    }\n\n");
         w.write("    private void execute(Stmt stmt) { stmt.accept(this); }\n");
@@ -105,7 +116,6 @@ public class InterpreterTemplateGenerator {
                     w.write("        Object right = evaluate(" + var + ".right);\n");
                     w.write("        String op = " + var + ".operator;\n");
                     w.write("        switch (op) {\n");
-                    // +, -, *, /, %, comparisons, logicals, null-coalesce, <=> 
                     w.write("            case \"+\":\n");
                     w.write("                if (left instanceof Double && right instanceof Double) return toNumber(left) + toNumber(right);\n");
                     w.write("                if (left instanceof String || right instanceof String) return toStr(left) + toStr(right);\n");
@@ -266,14 +276,30 @@ public class InterpreterTemplateGenerator {
                     w.write("            for (Stmt s : " + var + ".finallyBlock) execute(s);\n");
                     w.write("        }\n");
                     break;
-                case "ClassStmt":
+                default:
+                    w.write("        // TODO: handle " + className + "\n");
+            }
+            w.write("        return null;\n");
+            w.write("    }\n\n");
+        }
+    }
+
+    private static void writeDeclVisitorMethods(BufferedWriter w) throws IOException {
+        for (String className : DECL_NODES) {
+            String var = decap(className);
+            w.write("    @Override\n");
+            w.write("    public Void visit" + className + "(" + className + " " + var + ") {\n");
+            switch (className) {
+                case "ImportDecl":
+                    w.write("        // 'use' / import: no-op at runtime (or record module)\n");
+                    break;
+                case "ClassDecl":
+                    w.write("        // TODO: implement class declaration: name = \" + " + var + ".name + \"\n");
                     w.write("        throw new RuntimeError(\"Class declarations not implemented yet.\");\n");
                     break;
-                case "MethodStmt":
+                case "MethodDecl":
+                    w.write("        // TODO: implement method declaration: name = \" + " + var + ".name + \"\n");
                     w.write("        throw new RuntimeError(\"Method declarations not implemented yet.\");\n");
-                    break;
-                case "ImportStmt":
-                    w.write("        // 'use' / import: no-op at runtime\n");
                     break;
                 default:
                     w.write("        // TODO: handle " + className + "\n");
@@ -287,4 +313,4 @@ public class InterpreterTemplateGenerator {
         if (s == null || s.isEmpty()) return s;
         return Character.toLowerCase(s.charAt(0)) + s.substring(1);
     }
-  }
+                        }
