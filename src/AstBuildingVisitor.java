@@ -173,7 +173,76 @@ private Decl buildTopLevelMethod(DanexParser.TopLevelMethodDeclContext ctx) {
 
     return builder.visitMethodDecl(methodNode);
 }
-    
+    /**
+
+Shared param builder for both MethodDeclContext and TopLevelMethodDeclContext.
+*/
+private List<Param> buildParams(DanexParser.ParamListContext paramListCtx) {
+List<Param> params = new ArrayList<>();
+if (paramListCtx != null) {
+for (var pCtx : paramListCtx.param()) {
+String pType = pCtx.type().getText();
+String pName = pCtx.IDENTIFIER().getText();
+boolean varargs = pCtx.VARARGS() != null;
+Param paramNode = new Param(pType, pName, varargs);
+paramNode = (Param) builder.visitParam(paramNode);
+params.add(paramNode);
+}
+}
+return params;
+}
+
+/**
+
+Shared annotations builder.
+*/
+private List<Annotation> buildAnnotations(List<DanexParser.AnnotationContext> annotationCtxs) {
+List<Annotation> annotations = new ArrayList<>();
+for (var annCtx : annotationCtxs) {
+Object annObj = visit(annCtx);
+if (annObj instanceof Annotation) {
+annotations.add((Annotation) annObj);
+}
+}
+return annotations;
+}
+
+/**
+
+Shared modifier builder.
+*/
+private List<String> buildModifiers(List<DanexParser.ModifierContext> modifierCtxs) {
+List<String> modifiers = new ArrayList<>();
+for (var m : modifierCtxs) {
+modifiers.add(m.getText());
+}
+return modifiers;
+}
+
+/**
+
+Shared method body builder: handles both block and expression bodies.
+*/
+private Stmt buildMethodBody(String methodName, String resultName, DanexParser.MethodBodyContext bodyCtx) {
+if (bodyCtx.block() != null) {
+Object bObj = visit(bodyCtx.block());
+if (!(bObj instanceof Stmt)) {
+throw new RuntimeException("Expected Stmt from block, got: " + bObj);
+}
+return (Stmt) bObj;
+} else {
+Expr expr = (Expr) visit(bodyCtx.expression());
+String target = (resultName != null) ? resultName : methodName;
+AssignExpr assign = new AssignExpr(target, expr);
+assign = (AssignExpr) builder.visitAssignExpr(assign);
+ExprStmt exprStmt = new ExprStmt(assign);
+exprStmt = (ExprStmt) builder.visitExprStmt(exprStmt);
+List<Stmt> stmts = new ArrayList<>();
+stmts.add(exprStmt);
+BlockStmt block = new BlockStmt(stmts);
+return (BlockStmt) builder.visitBlockStmt(block);
+}
+}
     // -------------------
     // Blocks
     // -------------------
