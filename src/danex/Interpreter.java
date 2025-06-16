@@ -243,14 +243,12 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
         Object value = null;
         if (returnStmt.value != null) value = evaluate(returnStmt.value);
         throw new Return(value);
-        return null;
     }
 
     @Override
     public Void visitThrowStmt(ThrowStmt throwStmt) {
         Object ex = evaluate(throwStmt.exception);
         throw new RuntimeError(toStr(ex));
-        return null;
     }
 
     @Override
@@ -276,14 +274,12 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
     public Void visitClassDecl(ClassDecl classDecl) {
         // TODO: implement class declaration: name = " + classDecl.name + "
         throw new RuntimeError("Class declarations not implemented yet.");
-        return null;
     }
 
     @Override
     public Void visitMethodDecl(MethodDecl methodDecl) {
         // TODO: implement method declaration: name = " + methodDecl.name + "
         throw new RuntimeError("Method declarations not implemented yet.");
-        return null;
     }
 
     @Override
