@@ -336,7 +336,7 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
     @Override
     public Object visitExpressionStatement(DanexParser.ExpressionStatementContext ctx) {
         Expr expr = (Expr) visit(ctx.expression());
-        ExpressionStmt exprStmt = new ExpressionStmt(expr);
+        ExprStmt exprStmt = new ExprStmt(expr);
         return builder.visitExpressionStmt(exprStmt);
     }
 
