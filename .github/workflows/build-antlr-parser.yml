@@ -8,7 +8,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write  # Allow pushing back to the repo
 
 jobs:
   build-antlr:
@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
+        with:
+          persist-credentials: true  # Needed to push changes
 
       - name: Set up Java 17
         uses: actions/setup-java@v3
@@ -29,38 +31,41 @@ jobs:
           mkdir -p lib
           curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
 
-      - name: Generate ANTLR lexer and parser to src/danex/parser
+      - name: Generate ANTLR lexer and parser to src/danex/grammar
         run: |
-          mkdir -p src/danex
+          mkdir -p src/danex/grammar
 
           echo "Generating DanexLexer..."
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
-            -package danex.parser \
-            -o src/danex \
+            -package danex.grammar \
+            -o src/danex/grammar \
             grammar/DanexLexer.g4
 
-          echo "Locating DanexLexer.tokens..."
-          TOKENS_PATH=$(find src/danex -name "DanexLexer.tokens")
-          echo "Found at: $TOKENS_PATH"
-
-          echo "Copying DanexLexer.tokens to grammar/..."
-          cp "$TOKENS_PATH" grammar/
+          echo "Copying DanexLexer.tokens to grammar/"
+          cp src/danex/grammar/DanexLexer.tokens grammar/
 
           echo "Generating DanexParser..."
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -visitor \
-            -package danex.parser \
-            -o src/danex \
+            -package danex.grammar \
+            -o src/danex/grammar \
             -lib grammar \
             grammar/DanexParser.g4
 
-          echo "Removing copied tokens..."
-          rm -f grammar/DanexLexer.tokens
+          echo "Removing temporary .tokens file"
+          rm grammar/DanexLexer.tokens
 
       - name: Confirm generated files
         run: |
           echo "Generated files:"
-          find src/danex/parser -type f || echo "No parser directory yet"
-          find src/danex -type f
+          find src/danex/grammar -type f
+
+      - name: Commit and push generated files
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add src/danex/grammar
+          git diff --cached --quiet || git commit -m "Auto-generate ANTLR lexer and parser"
+          git push origin main
