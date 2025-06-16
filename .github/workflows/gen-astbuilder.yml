@@ -2,11 +2,15 @@ name: Generate AstBuilder
 
 on:
   push:
+    # Trigger when generator or grammar or AST node definitions change.
     paths:
       - 'tools/AstBuilderGenerator.java'
       - 'src/danex/ast/**'
+      - 'grammar/**'
       - '.github/workflows/gen-astbuilder.yml'
     branches: [main]
+  # Also allow manual dispatch if needed
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -14,46 +18,115 @@ permissions:
 jobs:
   generate-astbuilder:
     runs-on: ubuntu-latest
+
     steps:
+      # 1. Checkout with full history for rebase/push
       - name: Checkout repo
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
+      # 2. Set up Java 17
       - name: Set up Java
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Ensure src/danex exists
+      # 3. Ensure output directory exists
+      - name: Ensure src/danex directory exists
         run: mkdir -p src/danex
 
-      - name: Skip if AstBuilder.java already exists
+      # 4. Skip if AstBuilder.java already exists
+      - name: Skip if AstBuilder.java exists
         run: |
           if [ -f src/danex/AstBuilder.java ]; then
-            echo "✅ AstBuilder.java already exists. Skipping generation."
+            echo "✅ src/danex/AstBuilder.java already exists. Skipping generation."
             exit 0
           fi
+          echo "⚠️ src/danex/AstBuilder.java not found. Proceeding to generate."
 
+      # 5. Ensure lib/antlr and parser JAR exist (if your generator needs them)
+      - name: Download ANTLR runtime if missing
+        run: |
+          mkdir -p lib
+          if [ ! -f lib/antlr-4.9.2-complete.jar ]; then
+            echo "Downloading ANTLR runtime..."
+            curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
+          else
+            echo "ANTLR runtime already present."
+          fi
+
+      - name: Ensure parser JAR exists
+        run: |
+          if [ ! -f lib/danex-parser.jar ]; then
+            echo "❌ lib/danex-parser.jar not found. Ensure parser build workflow ran first."
+            exit 1
+          fi
+
+      # 6. Compile AstBuilderGenerator with classpath so imports resolve
       - name: Compile AstBuilderGenerator
         run: |
           mkdir -p bin
-          javac -cp "lib/danex-parser.jar" -d bin tools/AstBuilderGenerator.java
+          javac -cp "lib/danex-parser.jar:lib/antlr-4.9.2-complete.jar" -d bin tools/AstBuilderGenerator.java
 
+      # 7. Run the generator
       - name: Run AstBuilderGenerator
         run: |
-          java -cp "bin:lib/danex-parser.jar" tools.AstBuilderGenerator
+          java -cp "bin:lib/danex-parser.jar:lib/antlr-4.9.2-complete.jar" tools.AstBuilderGenerator
 
+      # 8. Debug: list contents under src/danex to confirm file creation
+      - name: Debug - list src/danex contents
+        run: |
+          echo "Contents of src/danex/:"
+          ls -R src/danex || echo "src/danex/ not found"
+
+      # 9. Confirm AstBuilder.java exists and show top lines
+      - name: Confirm AstBuilder.java exists
+        run: |
+          if [ -f src/danex/AstBuilder.java ]; then
+            echo "✅ src/danex/AstBuilder.java was generated"
+            head -n 20 src/danex/AstBuilder.java
+          else
+            echo "❌ src/danex/AstBuilder.java NOT found; generator may have failed"
+            exit 1
+          fi
+
+      # 10. Compile generated AstBuilder to catch compile errors
+      - name: Compile generated AstBuilder
+        run: |
+          mkdir -p bin
+          javac -cp "lib/antlr-4.9.2-complete.jar:lib/danex-parser.jar" -d bin src/danex/AstBuilder.java || exit 1
+
+      # 11. Commit generated AstBuilder.java if changed, with pull--rebase
       - name: Commit generated AstBuilder
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add src/danex/AstBuilder.java
+
+          # If no differences, skip
           if git diff --cached --quiet; then
-            echo "No changes to commit."
-          else
-            git commit -m "chore: regenerate AstBuilder.java [skip ci]"
-            git push origin HEAD:main
+            echo "No AstBuilder changes to commit."
+            exit 0
           fi
+
+          # Rebase onto latest to avoid push conflicts
+          git fetch origin main
+          git rebase origin/main
+
+          git commit -m "chore: regenerate AstBuilder.java [skip ci]"
+
+          # Push with retry logic
+          max_attempts=3
+          attempt=1
+          until git push origin HEAD:main; do
+            if [ $attempt -ge $max_attempts ]; then
+              echo "❌ Push failed after $attempt attempts."
+              exit 1
+            fi
+            echo "⚠️ Push failed. Retrying ($attempt/$max_attempts)..."
+            git pull --rebase origin main
+            attempt=$((attempt + 1))
+          done
