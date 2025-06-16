@@ -39,20 +39,16 @@ jobs:
           if [ ! -f lib/antlr-4.9.2-complete.jar ]; then
             echo "Downloading ANTLR runtime..."
             curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
-          else
-            echo "Using cached ANTLR runtime."
           fi
 
-      - name: Generate ANTLR Lexer & Parser sources (with visitor support)
+      - name: Generate ANTLR Lexer & Parser (with visitor support)
         run: |
           mkdir -p src/generated
-
-          # Compile both lexer and parser together
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -visitor \
-            -o src/generated \
             -package danex.antlr \
+            -o src/generated \
             grammar/DanexLexer.g4 grammar/DanexParser.g4
 
       - name: Compile ANTLR-generated sources
