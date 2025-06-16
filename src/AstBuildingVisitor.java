@@ -1,8 +1,6 @@
 package src;
 
 import danex.ast.*;
-import danex.ast.Expr.*;
-import danex.ast.Stmt.*;
 import danex.grammar.*;
 import danex.*;
 
