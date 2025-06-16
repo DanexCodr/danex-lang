@@ -341,4 +341,8 @@ public Void visitResourceDecl(ResourceDecl decl) {
     // No-op for now, unless you want resources to register something
     return null;
 }
+
+public Environment getGlobals() {
+    return globals;
+}
 }
