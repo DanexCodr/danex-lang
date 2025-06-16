@@ -4,7 +4,7 @@ on:
   push:
     paths:
       - 'grammar/**'
-      - '.github/workflows/build-antlr-java.yml'
+      - '.github/workflows/antlr-java.yml'
     branches: [main]
 
 permissions:
@@ -44,8 +44,11 @@ jobs:
             grammar/DanexLexer.g4
 
           echo "Locating .tokens file..."
-          TOKENS_DIR=$(find src/danex/grammar -name DanexLexer.tokens -exec dirname {} \;)
-          echo "Found tokens in: $TOKENS_DIR"
+          TOKENS=$(find src/danex/grammar -name "DanexLexer.tokens")
+          if [ -z "$TOKENS" ]; then
+            echo "❌ DanexLexer.tokens not found!"
+            exit 1
+          fi
 
           echo "Generating parser..."
           java -jar lib/antlr.jar \
@@ -53,8 +56,11 @@ jobs:
             -visitor \
             -package danex.grammar \
             -o src/danex/grammar \
-            -lib "$TOKENS_DIR" \
+            -lib grammar \
             grammar/DanexParser.g4
+
+          # Optional cleanup if grammar/ subfolder was generated
+          rm -rf src/danex/grammar/grammar
 
       - name: Commit generated files
         run: |
