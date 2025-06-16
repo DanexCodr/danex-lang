@@ -55,7 +55,6 @@ public class AstBuilderGenerator {
             sb.append("        // Return a new Annotation or process children if needed\n");
             sb.append("        return new Annotation(annotation.name);\n");
             sb.append("    }\n\n");
-            sb.append("    @Override\n");
             sb.append("    public Param visitParam(Param param) {\n");
             sb.append("        // Return a new Param or process children if needed\n");
             sb.append("        return new Param(param.type, param.name, param.varargs);\n");
