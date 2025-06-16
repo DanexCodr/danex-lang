@@ -7,27 +7,11 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
     private Environment globals = new Environment();
     private Environment environment = globals;
 
-public Interpreter() {
-    setupBuiltins();
-}
-
-    private void setupBuiltins() {
-       globals.define("print", new DanexCallable() {
-    @Override
-    public Object call(Interpreter interpreter, List<Object> args) {
-        for (Object arg : args) {
-            System.out.println(arg);
-        }
-        return null;
+    private static class Return extends RuntimeException {
+        final Object value;
+        Return(Object value) { super(null, null, false, false); this.value = value; }
     }
 
-    @Override
-    public String toString() {
-        return "<builtin fn print>";
-    }
-}); 
-    }
-    
     public void interpret(List<Stmt> statements) {
         try {
             for (Stmt stmt : statements) execute(stmt);
@@ -44,16 +28,6 @@ public Interpreter() {
         }
     }
 
-public void executeInEnvironment(Stmt body, Environment newEnv) {
-    Environment previous = this.environment;
-    try {
-        this.environment = newEnv;
-        execute(body);
-    } finally {
-        this.environment = previous;
-    }
-}
-    
     private void execute(Stmt stmt) { stmt.accept(this); }
     private Object evaluate(Expr expr) { return expr.accept(this); }
 
@@ -76,16 +50,6 @@ public void executeInEnvironment(Stmt body, Environment newEnv) {
     private double toNumber(Object obj) { return (Double) obj; }
     private String toStr(Object obj) { return obj == null ? "null" : obj.toString(); }
 
-@Override
-public Void visitParam(Param param) {
-    return null;
-}
-    
-@Override
-public Void visitAnnotation(Annotation annotation) {
-    // No-op, or implement annotation behavior here
-    return null;
-}    
     @Override
     public Object visitLiteralExpr(LiteralExpr literalExpr) {
         return literalExpr.value;
@@ -178,18 +142,12 @@ public Void visitAnnotation(Annotation annotation) {
     }
 
     @Override
-public Object visitCallExpr(CallExpr callExpr) {
-    Object callee = evaluate(callExpr.callee);
-    List<Object> args = new ArrayList<>();
-    for (Expr arg : callExpr.arguments) args.add(evaluate(arg));
-
-    if (!(callee instanceof DanexCallable)) {
-        throw new RuntimeError("Can only call functions and classes.");
+    public Object visitCallExpr(CallExpr callExpr) {
+        Object callee = evaluate(callExpr.callee);
+        List<Object> args = new ArrayList<>();
+        for (Expr arg : callExpr.arguments) args.add(evaluate(arg));
+        throw new RuntimeError("Function calls not implemented yet.");
     }
-
-    DanexCallable function = (DanexCallable) callee;
-    return function.call(this, args);
-}
 
     @Override
     public Object visitLambdaExpr(LambdaExpr lambdaExpr) {
@@ -228,19 +186,6 @@ public Object visitCallExpr(CallExpr callExpr) {
         throw new RuntimeError("Try-expression not supported yet.");
     }
 
-@Override
-public Void visitAssignStmt(AssignStmt stmt) {
-    Object value = evaluate(stmt.value);
-
-    if (!(stmt.target instanceof VariableExpr)) {
-        throw new RuntimeError("Invalid assignment target.");
-    }
-
-    String varName = ((VariableExpr) stmt.target).name;
-    environment.assign(varName, value);
-    return null;
-}
-    
     @Override
     public Void visitExprStmt(ExprStmt exprStmt) {
         evaluate(exprStmt.expression);
@@ -294,9 +239,18 @@ public Void visitAssignStmt(AssignStmt stmt) {
     }
 
     @Override
+    public Void visitReturnStmt(ReturnStmt returnStmt) {
+        Object value = null;
+        if (returnStmt.value != null) value = evaluate(returnStmt.value);
+        throw new Return(value);
+        return null;
+    }
+
+    @Override
     public Void visitThrowStmt(ThrowStmt throwStmt) {
         Object ex = evaluate(throwStmt.exception);
         throw new RuntimeError(toStr(ex));
+        return null;
     }
 
     @Override
@@ -322,27 +276,20 @@ public Void visitAssignStmt(AssignStmt stmt) {
     public Void visitClassDecl(ClassDecl classDecl) {
         // TODO: implement class declaration: name = " + classDecl.name + "
         throw new RuntimeError("Class declarations not implemented yet.");
+        return null;
     }
 
-@Override
-public Void visitMethodDecl(MethodDecl methodDecl) {
-    DanexFunction function = new DanexFunction(methodDecl, environment);
-    environment.define(methodDecl.name, function); // 🛠 Correct binding!
-    return null;
-}
+    @Override
+    public Void visitMethodDecl(MethodDecl methodDecl) {
+        // TODO: implement method declaration: name = " + methodDecl.name + "
+        throw new RuntimeError("Method declarations not implemented yet.");
+        return null;
+    }
 
     @Override
     public Void visitImportDecl(ImportDecl importDecl) {
         // 'use' / import: no-op or record module as needed
         return null;
     }
-@Override
-public Void visitResourceDecl(ResourceDecl decl) {
-    // No-op for now, unless you want resources to register something
-    return null;
-}
 
-public Environment getGlobals() {
-    return globals;
-}
 }
