@@ -38,8 +38,24 @@ jobs:
       - name: Generate ANTLR Lexer & Parser sources
         run: |
           mkdir -p src/generated
-          java -jar lib/antlr-4.9.2-complete.jar -Dlanguage=Java -o src/generated -package danex.antlr grammar/DanexLexer.g4
-          java -jar lib/antlr-4.9.2-complete.jar -Dlanguage=Java -o src/generated -package danex.antlr -lib src/generated grammar/DanexParser.g4
+
+          # Step 1: Generate Lexer
+          java -jar lib/antlr-4.9.2-complete.jar \
+            -Dlanguage=Java \
+            -o src/generated \
+            -package danex.antlr \
+            grammar/DanexLexer.g4
+
+          # Step 2: Copy tokens so parser can find them
+          cp src/generated/DanexLexer.tokens grammar/
+
+          # Step 3: Generate Parser
+          java -jar lib/antlr-4.9.2-complete.jar \
+            -Dlanguage=Java \
+            -o src/generated \
+            -package danex.antlr \
+            -lib grammar \
+            grammar/DanexParser.g4
 
       - name: Compile all source files
         run: |
