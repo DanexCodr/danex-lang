@@ -157,12 +157,18 @@ public Void visitAnnotation(Annotation annotation) {
     }
 
     @Override
-    public Object visitCallExpr(CallExpr callExpr) {
-        Object callee = evaluate(callExpr.callee);
-        List<Object> args = new ArrayList<>();
-        for (Expr arg : callExpr.arguments) args.add(evaluate(arg));
-        throw new RuntimeError("Function calls not implemented yet.");
+public Object visitCallExpr(CallExpr callExpr) {
+    Object callee = evaluate(callExpr.callee);
+    List<Object> args = new ArrayList<>();
+    for (Expr arg : callExpr.arguments) args.add(evaluate(arg));
+
+    if (!(callee instanceof DanexCallable)) {
+        throw new RuntimeError("Can only call functions and classes.");
     }
+
+    DanexCallable function = (DanexCallable) callee;
+    return function.call(this, args);
+}
 
     @Override
     public Object visitLambdaExpr(LambdaExpr lambdaExpr) {
@@ -297,10 +303,10 @@ public Void visitAssignStmt(AssignStmt stmt) {
         throw new RuntimeError("Class declarations not implemented yet.");
     }
 
-    @Override
+@Override
 public Void visitMethodDecl(MethodDecl methodDecl) {
     DanexFunction function = new DanexFunction(methodDecl, environment);
-    environment.define(methodDecl.name, environment);
+    environment.define(methodDecl.name, function); // 🛠 Correct binding!
     return null;
 }
 
