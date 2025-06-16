@@ -682,18 +682,23 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
 @Override
 public Decl visitArrowFunctionDecl(DanexParser.ArrowFunctionDeclContext ctx) {
     String name = ctx.IDENTIFIER().getText();
-    List<Param> params = extractParams(ctx.paramList()); // implement this helper
+    List<Param> params = extractParams(ctx.paramList()); // assumes you implemented this helper
     Expr expr = visit(ctx.expression());
 
-    // Use the line number from ctx
-    int line = ctx.getStart().getLine();
+    // Simulate return: methodName = expr;
+    Expr returnExpr = new AssignExpr(name, expr);
+    Stmt body = new ExprStmt(returnExpr); // wrap in ExprStmt
 
-    // Wrap the expression in a return statement
-    ReturnStmt returnStmt = new ReturnStmt(line, expr);
-    List<Stmt> body = List.of(returnStmt);
-
-    // Return type is null if your language infers it or doesn't use one
-    return new MethodDecl(name, params, /* returnType = */ null, body);
+    // Construct MethodDecl with dummy metadata
+    return new MethodDecl(
+        name,                 // method name
+        "auto",               // result type (placeholder or inferred)
+        name,                 // result variable name
+        new ArrayList<>(),    // annotations
+        new ArrayList<>(),    // modifiers
+        params,
+        body
+    );
 }
     
     // Other rules omitted for brevity; add as needed.
