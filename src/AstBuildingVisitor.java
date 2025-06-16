@@ -342,16 +342,6 @@ private Stmt buildMethodBody(String methodName, String resultName, DanexParser.M
     }
 
     @Override
-    public Object visitReturnStatement(DanexParser.ReturnStatementContext ctx) {
-        Expr value = null;
-        if (ctx.expression() != null) {
-            value = (Expr) visit(ctx.expression());
-        }
-        ReturnStmt returnNode = new ReturnStmt(value);
-        return builder.visitReturnStmt(returnNode);
-    }
-
-    @Override
     public Object visitExitStatement(DanexParser.ExitStatementContext ctx) {
         ExitStmt exitNode = new ExitStmt();
         return builder.visitExitStmt(exitNode);
