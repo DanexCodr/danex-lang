@@ -1,7 +1,7 @@
 package danex;
 
-import danex.antlr.DanexBaseVisitor;
-import danex.antlr.DanexParser;
+import danex.grammar.DanexBaseVisitor;
+import danex.grammar.DanexParser;
 import danex.ast.*;
 
 import java.util.*;
