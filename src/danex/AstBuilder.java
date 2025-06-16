@@ -64,13 +64,6 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt> {
     }
 
     @Override
-    public Object visitClassStmt(ClassStmt classStmt) {
-        String name = classStmt.name;
-        List<Stmt> members = classStmt.members;
-        return new ClassStmt(name, members);
-    }
-
-    @Override
     public Object visitDoWhileStmt(DoWhileStmt doWhileStmt) {
         Stmt body = doWhileStmt.body;
         Expr condition = doWhileStmt.condition;
@@ -151,14 +144,6 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt> {
     }
 
     @Override
-    public Object visitMethodStmt(MethodStmt methodStmt) {
-        String name = methodStmt.name;
-        List<String> params = methodStmt.params;
-        List<Stmt> body = methodStmt.body;
-        return new MethodStmt(name, params, body);
-    }
-
-    @Override
     public Object visitLambdaExpr(LambdaExpr lambdaExpr) {
         List<String> params = lambdaExpr.params;
         Expr body = lambdaExpr.body;
@@ -176,13 +161,6 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt> {
     public Object visitThrowStmt(ThrowStmt throwStmt) {
         Expr exception = throwStmt.exception;
         return new ThrowStmt(exception);
-    }
-
-    @Override
-    public Object visitImportStmt(ImportStmt importStmt) {
-        String moduleName = importStmt.moduleName;
-        String alias = importStmt.alias;
-        return new ImportStmt(moduleName, alias);
     }
 
 }
