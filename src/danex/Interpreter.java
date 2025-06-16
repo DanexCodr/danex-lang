@@ -34,7 +34,6 @@ public void executeInEnvironment(Stmt stmt, Environment newEnv) {
         }
     }
 
-    @Override
 public void interpretDecls(List<Decl> decls) {
     try {
         for (Decl decl : decls) decl.accept(this);
