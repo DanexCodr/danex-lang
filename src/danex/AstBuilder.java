@@ -3,7 +3,7 @@ package danex;
 import danex.ast.*;
 import java.util.*;
 
-public class AstBuilder implements Expr.Visitor<Object>, Stmt.Visitor<Object> {
+public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt> {
 
     @Override
     public Object visitAwaitExpr(AwaitExpr awaitExpr) {
