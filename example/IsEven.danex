@@ -1,7 +1,5 @@
-sayHello(String name) {
-    print("Hello, " + name + "!");
-}
+isEven(Int n) => n % 2 == 0;
 
 main() {
-    sayHello("Danex");
+print(isEven(2));
 }
