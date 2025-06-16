@@ -1,4 +1,3 @@
-// File: src/danex/Main.java
 package danex;
 
 import org.antlr.v4.runtime.CharStream;
@@ -23,23 +22,22 @@ public class Main {
         String inputPath = args[0];
         CharStream input = CharStreams.fromStream(new FileInputStream(inputPath));
 
-        // Step 1: Lexing & Parsing
         DanexLexer lexer = new DanexLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         DanexParser parser = new DanexParser(tokens);
 
         ParseTree tree = parser.compilationUnit();
 
-        // Step 2: Build AST Declarations
         AstBuilder builder = new AstBuilder();
         AstBuildingVisitor visitor = new AstBuildingVisitor(builder);
         @SuppressWarnings("unchecked")
         List<Decl> programDecls = (List<Decl>) visitor.visit(tree);
 
-        // Step 3: Interpret declarations
         Interpreter interpreter = new Interpreter();
         interpreter.interpretDecls(programDecls);
 
-        // If your language also supports top-level statements, you could handle them similarly.
+        // ✅ Run main() automatically
+        DanexCallable mainFn = (DanexCallable) interpreter.globals.get("main");
+        mainFn.call(interpreter, new java.util.ArrayList<>());
     }
 }
