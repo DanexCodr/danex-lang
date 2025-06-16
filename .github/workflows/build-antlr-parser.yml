@@ -40,7 +40,7 @@ jobs:
       - name: 🧹 Prepare output directory
         run: mkdir -p src/danex/parser
 
-      - name: 🧠 Step 1: Generate Lexer to `src/danex/parser`
+      - name: 🧠 Step 1 - Generate Lexer to `src/danex/parser`
         run: |
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
@@ -48,7 +48,7 @@ jobs:
             -o src/danex/parser \
             grammar/DanexLexer.g4
 
-      - name: 🧠 Step 2: Generate Parser to `src/danex/parser`
+      - name: 🧠 Step 2 - Generate Parser to `src/danex/parser`
         run: |
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
@@ -57,7 +57,7 @@ jobs:
             -o src/danex/parser \
             grammar/DanexParser.g4
 
-      - name: 🔍 Debug: Show contents of src/danex/parser
+      - name: 🔍 Debug - Show contents of src/danex/parser
         run: |
           echo "::group::Generated ANTLR Java Files"
           find src/danex/parser -name "*.java"
