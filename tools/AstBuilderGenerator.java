@@ -6,8 +6,8 @@ import java.util.*;
 
 /**
  * Generates AstBuilder.java by scanning AST classes in src/danex/ast/.
- * Assumes each AST class has a single constructor initializing final fields.
- * AST class names end with Expr or Stmt.
+ * Assumes each AST class is a top-level class in its own file, named XxxExpr or XxxStmt,
+ * and contains `public final Type name;` fields corresponding to constructor parameters.
  * Generates methods implementing Expr.Visitor<Object> and Stmt.Visitor<Object>.
  */
 public class AstBuilderGenerator {
@@ -29,6 +29,11 @@ public class AstBuilderGenerator {
                         astClasses.add(cls);
                     }
                 }
+            }
+
+            // If no AST classes found, warn
+            if (astClasses.isEmpty()) {
+                System.err.println("⚠️ No AST classes found in " + AST_DIR.toAbsolutePath());
             }
 
             // Build AstBuilder.java content
@@ -56,7 +61,7 @@ public class AstBuilderGenerator {
     }
 
     /**
-     * Parse an AST class file to extract className, whether Expr or Stmt, and its constructor fields.
+     * Parse an AST class file to extract className, whether Expr or Stmt, and its public final fields.
      * Returns null if the class is not an AST node (not ending in Expr or Stmt).
      */
     private static AstClass parseAstClass(Path path) throws IOException {
@@ -75,76 +80,45 @@ public class AstBuilderGenerator {
         }
 
         List<Field> fields = new ArrayList<>();
-
-        // Find the constructor signature: look for "public ClassName("
-        String ctorKey = "public " + className + "(";
-        int idx = content.indexOf(ctorKey);
-        if (idx >= 0) {
-            int startParams = idx + ctorKey.length() - 1; // position at '('
-            int endParams = findMatchingParen(content, startParams);
-            if (endParams > startParams) {
-                String paramsContent = content.substring(startParams + 1, endParams).trim();
-                if (!paramsContent.isEmpty()) {
-                    // Split by commas, but be cautious: parameter types might have generics with commas?
-                    // For simplicity, assume types do not contain unbalanced commas (common case: List<Expr>, List<String>, etc.)
-                    // If you have more complex types (e.g., Map<String, List<Expr>>), this naive split may break.
-                    String[] parts = paramsContent.split(",");
-                    for (String part : parts) {
-                        part = part.trim();
-                        if (part.isEmpty()) continue;
-                        // Expect "Type name" or possibly final/modifiers: ignore modifiers for now
-                        // Split on whitespace: last token is name, rest is type (including generics)
-                        String[] toks = part.split("\\s+");
-                        if (toks.length >= 2) {
-                            String name = toks[toks.length - 1];
-                            // Reconstruct type from the preceding tokens
-                            String type = toks[0];
-                            if (toks.length > 2) {
-                                // join tokens[0..length-2]
-                                StringBuilder typeSb = new StringBuilder(toks[0]);
-                                for (int i = 1; i < toks.length - 1; i++) {
-                                    typeSb.append(" ").append(toks[i]);
-                                }
-                                type = typeSb.toString();
+        // Scan line by line for `public final TYPE name;`
+        String[] lines = content.split("\\r?\\n");
+        for (String rawLine : lines) {
+            String line = rawLine.trim();
+            // Simple check: startsWith "public final"
+            if (line.startsWith("public final ")) {
+                // remove trailing ';' if present
+                if (line.endsWith(";")) {
+                    String decl = line.substring("public final ".length(), line.length() - 1).trim();
+                    // decl is like "Expr left" or "List<Expr> elements"
+                    // Split by whitespace: last token is name, rest is type
+                    String[] toks = decl.split("\\s+");
+                    if (toks.length >= 2) {
+                        String name = toks[toks.length - 1];
+                        // Reconstruct type from preceding tokens
+                        String type = toks[0];
+                        if (toks.length > 2) {
+                            StringBuilder tsb = new StringBuilder(toks[0]);
+                            for (int i = 1; i < toks.length - 1; i++) {
+                                tsb.append(" ").append(toks[i]);
                             }
-                            fields.add(new Field(type, name));
-                        } else {
-                            System.err.println("Warning: cannot parse constructor param '" + part +
-                                "' in " + className);
+                            type = tsb.toString();
                         }
+                        fields.add(new Field(type, name));
+                    } else {
+                        System.err.println("Warning: cannot parse field declaration '" + line +
+                                           "' in " + className);
                     }
                 }
-            } else {
-                System.err.println("Warning: unmatched parenthesis for constructor in " + className);
             }
-        } else {
-            System.err.println("Warning: No constructor found in " + className);
+        }
+
+        // If no public final fields found, warn
+        if (fields.isEmpty()) {
+            System.err.println("Warning: No public final fields found in " + className +
+                               ". Check if fields are declared differently or if constructor-only fields exist.");
         }
 
         return new AstClass(className, isExpr, isStmt, fields);
-    }
-
-    /**
-     * Find the index of the matching closing parenthesis for the '(' at position start.
-     * Returns the index of ')', or -1 if not found.
-     */
-    private static int findMatchingParen(String s, int start) {
-        if (start < 0 || start >= s.length() || s.charAt(start) != '(') {
-            return -1;
-        }
-        int depth = 0;
-        for (int i = start; i < s.length(); i++) {
-            char c = s.charAt(i);
-            if (c == '(') {
-                depth++;
-            } else if (c == ')') {
-                depth--;
-                if (depth == 0) {
-                    return i;
-                }
-            }
-        }
-        return -1;
     }
 
     /**
@@ -163,14 +137,15 @@ public class AstBuilderGenerator {
 
         sb.append("    @Override\n");
         sb.append("    public Object visit").append(className)
-          .append("(").append(baseType).append(" ").append(paramName).append(") {\n");
+          .append("(").append(baseType).append(".").append(className).append(" ").append(paramName).append(") {\n");
 
         List<String> argNames = new ArrayList<>();
         for (Field f : cls.fields) {
             sb.append("        ").append(generateFieldLineFromNode(f, paramName)).append("\n");
             argNames.add(f.name);
         }
-        // Construct new node or handle logic; here we just reconstruct same class
+        // Reconstruct same node by calling its constructor with the fields in order.
+        // Note: This assumes the class has a constructor matching (TYPE... field order as declared).
         sb.append("        return new ").append(className)
           .append("(").append(String.join(", ", argNames)).append(");\n");
         sb.append("    }\n");
@@ -184,24 +159,8 @@ public class AstBuilderGenerator {
     private static String generateFieldLineFromNode(Field field, String nodeVar) {
         String n = field.name;
         String t = field.type;
-        switch (t) {
-            case "Expr":
-                return "Expr " + n + " = " + nodeVar + "." + n + ";";
-            case "Stmt":
-                return "Stmt " + n + " = " + nodeVar + "." + n + ";";
-            case "List<Expr>":
-                return "List<Expr> " + n + " = " + nodeVar + "." + n + ";";
-            case "List<Stmt>":
-                return "List<Stmt> " + n + " = " + nodeVar + "." + n + ";";
-            case "List<String>":
-                return "List<String> " + n + " = " + nodeVar + "." + n + ";";
-            case "String":
-                return "String " + n + " = " + nodeVar + "." + n + ";";
-            case "Object":
-                return "Object " + n + " = " + nodeVar + "." + n + "; // TODO: adjust if needed";
-            default:
-                return "// TODO: handle field type " + t + " for " + n;
-        }
+        // You may adjust if some types need special handling; by default we just read the field.
+        return t + " " + n + " = " + nodeVar + "." + n + ";";
     }
 
     private static class Field {
@@ -225,4 +184,4 @@ public class AstBuilderGenerator {
             this.fields = fields;
         }
     }
-}
+    }
