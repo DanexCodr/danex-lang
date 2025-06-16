@@ -35,37 +35,24 @@ jobs:
             curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
           fi
 
-      - name: Generate ANTLR Lexer & Parser sources
+      - name: Generate ANTLR Lexer & Parser (with visitors)
         run: |
           mkdir -p src/generated
-
-          # Generate Lexer first and move its .tokens file to grammar/
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
+            -visitor \
             -package danex.antlr \
             -o src/generated \
-            grammar/DanexLexer.g4
-
-          mv grammar/DanexLexer.tokens grammar/
-
-          # Now generate the Parser using the tokens file
-          java -jar lib/antlr-4.9.2-complete.jar \
-            -Dlanguage=Java \
-            -package danex.antlr \
-            -o src/generated \
-            -lib grammar \
-            grammar/DanexParser.g4
+            grammar/DanexLexer.g4 grammar/DanexParser.g4
 
       - name: Compile all source files
         run: |
           mkdir -p bin
-          echo "Compiling all Java files..."
-
-          # Compile ANTLR-generated files first
+          echo "Compiling ANTLR-generated files..."
           find src/generated -name "*.java" > gen-sources.txt
           javac -cp lib/antlr-4.9.2-complete.jar -d bin @gen-sources.txt
 
-          # Then compile your own source files
+          echo "Compiling DanexLang source..."
           find src -name "*.java" > sources.txt
           javac -cp "lib/antlr-4.9.2-complete.jar:bin" -d bin @sources.txt
 
