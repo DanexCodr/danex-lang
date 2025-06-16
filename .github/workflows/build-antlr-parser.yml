@@ -15,75 +15,78 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: 📥 Checkout repo
         uses: actions/checkout@v3
 
-      - name: Set up Java 17
+      - name: ☕ Set up Java 17
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Cache ANTLR runtime JAR
+      - name: 📦 Cache ANTLR runtime JAR
         uses: actions/cache@v3
         with:
           path: lib/antlr-4.9.2-complete.jar
           key: antlr-runtime-v4.9.2
 
-      - name: Ensure ANTLR runtime JAR present
+      - name: 🧪 Ensure ANTLR runtime JAR is present
         run: |
           mkdir -p lib
           if [ ! -f lib/antlr-4.9.2-complete.jar ]; then
             curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
           fi
 
-      - name: Debug: List grammar files
+      - name: 📁 Create output directory
+        run: mkdir -p src/generated
+
+      - name: 🔍 Debug: List all grammar-related files
         run: |
-          echo "::group::📂 grammar directory contents"
-          ls -lh grammar/
+          echo "::group::Grammar directory structure"
+          find grammar -type f
           echo "::endgroup::"
 
-      - name: Generate ANTLR Lexer and Parser
+      - name: 🧠 Step 1: Generate Lexer
         run: |
-          mkdir -p src/generated
+          java -jar lib/antlr-4.9.2-complete.jar \
+            -Dlanguage=Java \
+            -package danex.antlr \
+            -o src/generated \
+            grammar/DanexLexer.g4
 
-          echo "::group::🛠️ Generating Lexer + Parser"
+      - name: 🔍 Debug: Check for generated .tokens file
+        run: |
+          echo "::group::Searching for .tokens files"
+          find . -name "*.tokens"
+          echo "::endgroup::"
+
+      - name: 🧠 Step 2: Generate Parser
+        run: |
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -visitor \
             -package danex.antlr \
             -o src/generated \
-            grammar/DanexLexer.g4 grammar/DanexParser.g4
-          echo "::endgroup::"
+            -lib grammar \
+            grammar/DanexParser.g4
 
-      - name: Debug: Check generated tokens and classes
+      - name: 🔍 Debug: List generated Java files
         run: |
-          echo "::group::📁 src/generated file list"
-          find src/generated -type f | sort
+          echo "::group::Generated Java files"
+          find src/generated -name "*.java"
           echo "::endgroup::"
 
-          echo "::group::🔍 Search for .tokens"
-          find . -name "*.tokens"
-          echo "::endgroup::"
-
-      - name: Fail if tokens file missing
-        run: |
-          if ! find . -name DanexLexer.tokens | grep -q .; then
-            echo "❌ DanexLexer.tokens not found! Lexer may have failed."
-            exit 1
-          fi
-
-      - name: Compile ANTLR-generated sources
+      - name: 🛠️ Compile ANTLR-generated sources
         run: |
           find src/generated -name "*.java" > sources.txt
           mkdir -p bin
           javac -cp lib/antlr-4.9.2-complete.jar -d bin @sources.txt
 
-      - name: Package parser JAR artifact
+      - name: 📦 Package parser JAR artifact
         run: |
           jar cf danex-parser.jar -C bin .
 
-      - name: Upload parser JAR artifact
+      - name: ⬆️ Upload parser JAR artifact
         uses: actions/upload-artifact@v4
         with:
           name: danex-parser
