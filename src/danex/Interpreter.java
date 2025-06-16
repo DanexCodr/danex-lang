@@ -7,6 +7,23 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
     private Environment globals = new Environment();
     private Environment environment = globals;
 
+public Interpreter() {
+    globals.define("print", new DanexCallable() {
+        @Override
+        public Object call(Interpreter interpreter, List<Object> args) {
+            for (Object arg : args) {
+                System.out.println(arg);  // or use a better formatter if you like
+            }
+            return null;
+        }
+
+        @Override
+        public String toString() {
+            return "<builtin fn print>";
+        }
+    });
+}
+    
     public static class Return extends RuntimeException {
     public final Object value;
 
