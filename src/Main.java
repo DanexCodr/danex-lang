@@ -6,7 +6,7 @@ import danex.grammar.DanexLexer;
 import danex.grammar.DanexParser;
 import danex.AstBuilder;
 import danex.Interpreter;
-import danex.ast.Stmt;
+import danex.ast.Decl;
 
 import java.io.FileInputStream;
 import java.util.List;
@@ -31,10 +31,14 @@ public class Main {
         // Step 2: Build AST
         AstBuilder builder = new AstBuilder();
         AstBuildingVisitor visitor = new AstBuildingVisitor(builder);
-        List<Stmt> program = visitor.visit(tree);
+        @SuppressWarnings("unchecked")
+        List<Decl> programDecls = (List<Decl>) visitor.visit(tree);
 
-        // Step 3: Interpret the AST
+        // Step 3: Interpret declarations
         Interpreter interpreter = new Interpreter();
-        interpreter.interpret(program);
+        interpreter.interpretDecls(programDecls);
+
+        // If your language allows top-level statements (grammar does not), you could also:
+        // interpreter.interpret(statements);
     }
 }
