@@ -1,22 +1,24 @@
-name: Build ANTLR Parser
+name: ANTLR Build
 
 on:
   push:
     paths:
       - 'grammar/**'
-      - '.github/workflows/build-antlr-parser.yml'
+      - '.github/workflows/antlr-java.yml'
     branches: [main]
 
 permissions:
-  contents: write  # Allow auto-commit
+  contents: write
 
 jobs:
-  build-antlr:
+  generate-parser:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Checkout
         uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
       - name: Set up Java 17
         uses: actions/setup-java@v3
@@ -24,43 +26,40 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Download ANTLR Tool
+      - name: Download ANTLR
         run: |
           mkdir -p lib
-          curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
+          curl -L -o lib/antlr.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
 
-      - name: Generate lexer and parser
+      - name: Generate Lexer and Parser
         run: |
           mkdir -p src/danex/grammar
+          java -jar lib/antlr.jar -Dlanguage=Java -visitor -package danex.grammar -o src/danex/grammar grammar/DanexLexer.g4
+          java -jar lib/antlr.jar -Dlanguage=Java -visitor -package danex.grammar -o src/danex/grammar -lib src/danex/grammar grammar/DanexParser.g4
 
-          echo "Generating DanexLexer..."
-          java -jar lib/antlr-4.9.2-complete.jar \
-            -Dlanguage=Java \
-            -package danex.grammar \
-            -o src/danex/grammar \
-            grammar/DanexLexer.g4
-
-          echo "Moving DanexLexer.tokens to grammar/..."
-          mv src/danex/grammar/DanexLexer.tokens grammar/
-
-          echo "Generating DanexParser..."
-          java -jar lib/antlr-4.9.2-complete.jar \
-            -Dlanguage=Java \
-            -visitor \
-            -package danex.grammar \
-            -o src/danex/grammar \
-            -lib grammar \
-            grammar/DanexParser.g4
-
-      - name: List generated files
+      - name: Commit generated files
         run: |
-          echo "Generated files:"
-          find src/danex/grammar -type f
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Commit and push changes
-        run: |
-          git config user.name "antlr-bot"
-          git config user.email "actions@github.com"
+          git reset
           git add src/danex/grammar
-          git commit -m "Auto-generated ANTLR parser and lexer" || echo "No changes to commit"
-          git push
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "chore: regenerate ANTLR lexer and parser [skip ci]"
+
+          max_attempts=3; attempt=1
+          until git push origin HEAD:main; do
+            if [ $attempt -ge $max_attempts ]; then
+              echo "❌ Push failed after $attempt attempts."
+              exit 1
+            fi
+            echo "⚠️ Push failed. Retrying after rebase..."
+            git fetch origin main
+            git rebase origin/main
+            attempt=$((attempt+1))
+          done
