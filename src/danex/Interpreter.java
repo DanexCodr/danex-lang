@@ -298,10 +298,11 @@ public Void visitAssignStmt(AssignStmt stmt) {
     }
 
     @Override
-    public Void visitMethodDecl(MethodDecl methodDecl) {
-        // TODO: implement method declaration: name = " + methodDecl.name + "
-        throw new RuntimeError("Method declarations not implemented yet.");
-    }
+public Void visitMethodDecl(MethodDecl methodDecl) {
+    DanexFunction function = new DanexFunction(methodDecl, environment);
+    environment.define(methodDecl.name, function);
+    return null;
+}
 
     @Override
     public Void visitImportDecl(ImportDecl importDecl) {
