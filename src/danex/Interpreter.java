@@ -23,6 +23,16 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
         }
     }
 
+public void executeInEnvironment(Stmt body, Environment newEnv) {
+    Environment previous = this.environment;
+    try {
+        this.environment = newEnv;
+        execute(body);
+    } finally {
+        this.environment = previous;
+    }
+}
+    
     private void execute(Stmt stmt) { stmt.accept(this); }
     private Object evaluate(Expr expr) { return expr.accept(this); }
 
@@ -50,6 +60,11 @@ public Void visitParam(Param param) {
     return null;
 }
     
+@Override
+public Void visitAnnotation(Annotation annotation) {
+    // No-op, or implement annotation behavior here
+    return null;
+}    
     @Override
     public Object visitLiteralExpr(LiteralExpr literalExpr) {
         return literalExpr.value;
