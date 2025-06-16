@@ -37,6 +37,15 @@ jobs:
           echo "Contents of src/danex/:"
           ls -R src/danex || echo "src/danex/ not found"
 
+      - name: Confirm AstBuilder.java exists
+        run: |
+          if [ -f src/danex/AstBuilder.java ]; then
+            echo "✅ src/danex/AstBuilder.java was generated"
+          else
+            echo "❌ src/danex/AstBuilder.java not found"
+            exit 1
+          fi
+
       - name: Compile generated AstBuilder
         run: |
           mkdir -p bin
