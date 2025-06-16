@@ -9,8 +9,6 @@ on:
       - 'grammar/**'
       - '.github/workflows/gen-astbuilder.yml'
     branches: [main]
-  # Also allow manual dispatch if needed
-  workflow_dispatch:
 
 permissions:
   contents: write
