@@ -2,8 +2,8 @@
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.*;
 
-import danex.antlr.DanexLexer;
-import danex.antlr.DanexParser;
+import danex.grammar.DanexLexer;
+import danex.grammar.DanexParser;
 import danex.AstBuilder;
 import danex.Interpreter;
 import danex.ast.Stmt;
