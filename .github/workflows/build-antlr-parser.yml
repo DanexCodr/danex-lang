@@ -1,4 +1,4 @@
-name: Build ANTLR Parser (artifact only)
+name: Build ANTLR Parser (no jar, no compile)
 
 on:
   push:
@@ -15,66 +15,44 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout repo
+      - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: ☕ Set up Java 17
+      - name: Set up Java 17
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: 📦 Cache ANTLR runtime JAR
-        uses: actions/cache@v3
-        with:
-          path: lib/antlr-4.9.2-complete.jar
-          key: antlr-runtime-v4.9.2
-
-      - name: 🧪 Ensure ANTLR runtime JAR is present
+      - name: Download ANTLR Tool
         run: |
           mkdir -p lib
-          if [ ! -f lib/antlr-4.9.2-complete.jar ]; then
-            curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
-          fi
+          curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
 
-      - name: 🧹 Prepare output directory
-        run: mkdir -p src/danex/parser
-
-      - name: 🧠 Step 1 - Generate Lexer to `src/danex/parser`
+      - name: Generate ANTLR lexer and parser to src/danex/parser
         run: |
+          mkdir -p src/danex/parser
+
+          echo "Generating DanexLexer..."
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -package danex.parser \
             -o src/danex/parser \
             grammar/DanexLexer.g4
 
-      - name: 🧠 Step 2 - Generate Parser to `src/danex/parser`
-        run: |
+          echo "Checking for DanexLexer.tokens:"
+          find . -name "DanexLexer.tokens"
+
+          echo "Generating DanexParser..."
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -visitor \
             -package danex.parser \
             -o src/danex/parser \
+            -lib grammar \
             grammar/DanexParser.g4
 
-      - name: 🔍 Debug - Show contents of src/danex/parser
+      - name: Confirm generated files
         run: |
-          echo "::group::Generated ANTLR Java Files"
-          find src/danex/parser -name "*.java"
-          echo "::endgroup::"
-
-      - name: 🛠️ Compile ANTLR-generated sources
-        run: |
-          find src/danex/parser -name "*.java" > sources.txt
-          mkdir -p bin
-          javac -cp lib/antlr-4.9.2-complete.jar -d bin @sources.txt
-
-      - name: 📦 Package parser JAR artifact
-        run: |
-          jar cf danex-parser.jar -C bin .
-
-      - name: ⬆️ Upload parser JAR artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: danex-parser
-          path: danex-parser.jar
+          echo "Files generated:"
+          find src/danex/parser -type f
