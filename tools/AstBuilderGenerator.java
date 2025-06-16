@@ -137,8 +137,7 @@ public class AstBuilderGenerator {
 
         sb.append("    @Override\n");
         sb.append("    public Object visit").append(className)
-          .append("(").append(baseType).append(".").append(className).append(" ").append(paramName).append(") {\n");
-
+  .append("(").append(className).append(" ").append(paramName).append(") {\n");
         List<String> argNames = new ArrayList<>();
         for (Field f : cls.fields) {
             sb.append("        ").append(generateFieldLineFromNode(f, paramName)).append("\n");
