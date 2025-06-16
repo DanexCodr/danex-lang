@@ -210,7 +210,6 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
         return new Annotation(annotation.name);
     }
 
-    @Override
     public Param visitParam(Param param) {
         // Return a new Param or process children if needed
         return new Param(param.type, param.name, param.varargs);
