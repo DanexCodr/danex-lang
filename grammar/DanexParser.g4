@@ -43,7 +43,7 @@ topLevelMethodDecl
     ;
 
 resultDecl
-    : LPAREN type IDENTIFIER? RPAREN
+    : LPAREN IDENTIFIER (IDENTIFIER)? RPAREN
     ;
 
 annotation
