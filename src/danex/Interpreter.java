@@ -45,6 +45,11 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
     private double toNumber(Object obj) { return (Double) obj; }
     private String toStr(Object obj) { return obj == null ? "null" : obj.toString(); }
 
+@Override
+public Void visitParam(Param param) {
+    return null;
+}
+    
     @Override
     public Object visitLiteralExpr(LiteralExpr literalExpr) {
         return literalExpr.value;
