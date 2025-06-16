@@ -5,12 +5,21 @@ import java.nio.file.*;
 import java.util.*;
 
 /**
- * Generates AstBuilder.java with visitor methods for all AST nodes,
- * and also includes manual overrides for Annotation, Param, ResourceDecl, ExprStmt, etc.
+ * Generates AstBuilder.java with visitor methods for AST nodes,
+ * but skips those we handle manually (Annotation, Param, ResourceDecl, ExprStmt).
  */
 public class AstBuilderGenerator {
     private static final Path AST_DIR = Paths.get("src/danex/ast");
     private static final Path OUTPUT_FILE = Paths.get("src/danex/AstBuilder.java");
+
+    /** Node class names for which we supply manual overrides, to avoid duplicates. */
+    private static final Set<String> MANUAL_OVERRIDES = Set.of(
+        "Annotation",
+        "Param",
+        "ResourceDecl",
+        "ExprStmt"
+        // If you have other manually overridden nodes, add them here.
+    );
 
     public static void main(String[] args) {
         try {
@@ -39,10 +48,14 @@ public class AstBuilderGenerator {
             sb.append("import java.util.*;\n\n");
             sb.append("public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.Visitor<Decl> {\n\n");
 
-            // 1) Auto-generate visitor methods for each AST node class
+            // 1) Auto-generate visitor methods for each AST node class, except manual overrides
             for (AstClass cls : astClasses) {
-                // Skip base classes
-                if (cls.className.equals("Expr") || cls.className.equals("Stmt") || cls.className.equals("Decl")) {
+                String name = cls.className;
+                if (name.equals("Expr") || name.equals("Stmt") || name.equals("Decl")) {
+                    continue;
+                }
+                if (MANUAL_OVERRIDES.contains(name)) {
+                    // skip auto-generation for these; manual overrides will be appended later
                     continue;
                 }
                 sb.append(generateVisitorMethod(cls)).append("\n");
@@ -50,34 +63,41 @@ public class AstBuilderGenerator {
 
             // 2) Append the manual overrides
             sb.append("    // === Manual overrides for certain AST node types ===\n\n");
+
+            // Annotation
             sb.append("    @Override\n");
             sb.append("    public Annotation visitAnnotation(Annotation annotation) {\n");
-            sb.append("        // Return a new Annotation or process children if needed\n");
             sb.append("        return new Annotation(annotation.name);\n");
             sb.append("    }\n\n");
+
+            // Param
+            sb.append("    @Override\n");
             sb.append("    public Param visitParam(Param param) {\n");
-            sb.append("        // Return a new Param or process children if needed\n");
             sb.append("        return new Param(param.type, param.name, param.varargs);\n");
             sb.append("    }\n\n");
+
+            // ResourceDecl
             sb.append("    @Override\n");
             sb.append("    public ResourceDecl visitResourceDecl(ResourceDecl rd) {\n");
-            sb.append("        // Visit initializer expression\n");
             sb.append("        Expr init = rd.initializer.accept(this);\n");
             sb.append("        return new ResourceDecl(rd.type, rd.name, init);\n");
             sb.append("    }\n\n");
+
+            // ExprStmt
             sb.append("    @Override\n");
             sb.append("    public ExprStmt visitExprStmt(ExprStmt stmt) {\n");
-            sb.append("        // Visit inner expression\n");
             sb.append("        Expr e = stmt.expression.accept(this);\n");
             sb.append("        return new ExprStmt(e);\n");
             sb.append("    }\n\n");
-            sb.append("    // If your AST uses ExpressionStmt instead of ExprStmt, uncomment below:\n");
+
+            sb.append("    // If your AST uses ExpressionStmt instead of ExprStmt, you can add:\n");
             sb.append("    // @Override\n");
             sb.append("    // public ExpressionStmt visitExpressionStmt(ExpressionStmt stmt) {\n");
             sb.append("    //     Expr e = stmt.expression.accept(this);\n");
             sb.append("    //     return new ExpressionStmt(e);\n");
             sb.append("    // }\n\n");
-            sb.append("    // Add further manual overrides here if needed.\n");
+
+            // Add further manual overrides here if needed
 
             sb.append("}\n");
 
@@ -134,11 +154,13 @@ public class AstBuilderGenerator {
         sb.append("    public ").append(returnType)
           .append(" visit").append(className)
           .append("(").append(className).append(" ").append(paramName).append(") {\n");
-        // Extract fields and reconstruct a new node:
+        // Extract fields and rebuild children via accept
         List<String> argNames = new ArrayList<>();
         for (Field f : cls.fields) {
             sb.append("        ").append(f.type).append(" ").append(f.name)
               .append(" = ").append(paramName).append(".").append(f.name).append(";\n");
+            // For children that are AST nodes or lists of them, one may want to accept():
+            // But here, for simplicity, we reconstruct with raw fields.
             argNames.add(f.name);
         }
         sb.append("        return new ").append(className)
@@ -170,4 +192,4 @@ public class AstBuilderGenerator {
             this.fields = fields;
         }
     }
-}
+                               }
