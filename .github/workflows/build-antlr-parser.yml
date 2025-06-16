@@ -37,15 +37,41 @@ jobs:
             curl -L -o lib/antlr-4.9.2-complete.jar https://www.antlr.org/download/antlr-4.9.2-complete.jar
           fi
 
+      - name: Debug: List grammar files
+        run: |
+          echo "::group::📂 grammar directory contents"
+          ls -lh grammar/
+          echo "::endgroup::"
+
       - name: Generate ANTLR Lexer and Parser
         run: |
           mkdir -p src/generated
+
+          echo "::group::🛠️ Generating Lexer + Parser"
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -visitor \
             -package danex.antlr \
             -o src/generated \
             grammar/DanexLexer.g4 grammar/DanexParser.g4
+          echo "::endgroup::"
+
+      - name: Debug: Check generated tokens and classes
+        run: |
+          echo "::group::📁 src/generated file list"
+          find src/generated -type f | sort
+          echo "::endgroup::"
+
+          echo "::group::🔍 Search for .tokens"
+          find . -name "*.tokens"
+          echo "::endgroup::"
+
+      - name: Fail if tokens file missing
+        run: |
+          if ! find . -name DanexLexer.tokens | grep -q .; then
+            echo "❌ DanexLexer.tokens not found! Lexer may have failed."
+            exit 1
+          fi
 
       - name: Compile ANTLR-generated sources
         run: |
