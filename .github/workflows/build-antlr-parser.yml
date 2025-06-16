@@ -8,7 +8,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build-antlr:
@@ -40,8 +40,12 @@ jobs:
             -o src/danex \
             grammar/DanexLexer.g4
 
+          echo "Locating DanexLexer.tokens..."
+          TOKENS_PATH=$(find src/danex -name "DanexLexer.tokens")
+          echo "Found at: $TOKENS_PATH"
+
           echo "Copying DanexLexer.tokens to grammar/..."
-          cp src/danex/parser/DanexLexer.tokens grammar/
+          cp "$TOKENS_PATH" grammar/
 
           echo "Generating DanexParser..."
           java -jar lib/antlr-4.9.2-complete.jar \
@@ -58,4 +62,5 @@ jobs:
       - name: Confirm generated files
         run: |
           echo "Generated files:"
-          find src/danex/parser -type f
+          find src/danex/parser -type f || echo "No parser directory yet"
+          find src/danex -type f
