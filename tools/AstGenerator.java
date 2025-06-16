@@ -183,12 +183,18 @@ public class AstGenerator {
         try (BufferedWriter w = Files.newBufferedWriter(file)) {
             w.write("package " + pkg + ";"); w.newLine(); w.newLine();
             w.write("public abstract class " + className + " extends ASTNode {"); w.newLine();
-            w.write("    public interface Visitor<R> {").newLine();
-            w.write("        R visitMethodDecl(MethodDecl methodDecl);").newLine();
-            w.write("        R visitClassDecl(ClassDecl classDecl);").newLine();
-            w.write("        R visitImportDecl(ImportDecl importDecl);").newLine();
-            w.write("        R visitAnnotation(Annotation annotation);").newLine();
-            w.write("        R visitParam(Param param);").newLine();
+            w.write("    public interface Visitor<R> {");
+            w.newLine();
+            w.write("        R visitMethodDecl(MethodDecl methodDecl);");
+            w.newLine();
+            w.write("        R visitClassDecl(ClassDecl classDecl);");
+            w.newLine();
+            w.write("        R visitImportDecl(ImportDecl importDecl);");
+            w.newLine();
+            w.write("        R visitAnnotation(Annotation annotation);");
+            w.newLine();
+            w.write("        R visitParam(Param param);");
+            w.newLine();
             w.write("    }"); w.newLine(); w.newLine();
             w.write("    public abstract <R> R accept(Visitor<R> visitor);"); w.newLine();
             w.write("}"); w.newLine();
@@ -268,7 +274,8 @@ public class AstGenerator {
         Path file = Paths.get(OUTPUT_DIR, nd.className + ".java");
         try (BufferedWriter w = Files.newBufferedWriter(file)) {
             w.write("package " + pkg + ";"); w.newLine(); w.newLine();
-            w.write("import java.util.*;"). newLine();
+            w.write("import java.util.*;");
+            w.newLine();
             w.write("public class " + nd.className + " extends Decl {"); w.newLine();
             // Fields
             for (String field : nd.fields) {
