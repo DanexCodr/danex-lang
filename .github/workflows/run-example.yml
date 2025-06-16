@@ -39,15 +39,16 @@ jobs:
         run: |
           mkdir -p src/generated
 
-          # Generate Lexer (writes DanexLexer.tokens into grammar/)
+          # Generate Lexer first and move its .tokens file to grammar/
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -package danex.antlr \
             -o src/generated \
-            -lib grammar \
             grammar/DanexLexer.g4
 
-          # Generate Parser (needs .tokens file from grammar/)
+          mv DanexLexer.tokens grammar/
+
+          # Now generate the Parser using the tokens file
           java -jar lib/antlr-4.9.2-complete.jar \
             -Dlanguage=Java \
             -package danex.antlr \
@@ -60,11 +61,11 @@ jobs:
           mkdir -p bin
           echo "Compiling all Java files..."
 
-          # Compile ANTLR-generated files
+          # Compile ANTLR-generated files first
           find src/generated -name "*.java" > gen-sources.txt
           javac -cp lib/antlr-4.9.2-complete.jar -d bin @gen-sources.txt
 
-          # Compile your source files
+          # Then compile your own source files
           find src -name "*.java" > sources.txt
           javac -cp "lib/antlr-4.9.2-complete.jar:bin" -d bin @sources.txt
 
