@@ -34,13 +34,19 @@ public void executeInEnvironment(Stmt stmt, Environment newEnv) {
         }
     }
 
-    public void interpretDecls(List<Decl> decls) {
-        try {
-            for (Decl decl : decls) decl.accept(this);
-        } catch (RuntimeError error) {
-            System.err.println("Runtime error in declaration: " + error.getMessage());
+    @Override
+public void interpretDecls(List<Decl> decls) {
+    try {
+        for (Decl decl : decls) decl.accept(this);
+        // Automatically run `main()` if it exists
+        Object maybeMain = globals.get("main");
+        if (maybeMain instanceof DanexCallable) {
+            ((DanexCallable) maybeMain).call(this, List.of());
         }
+    } catch (RuntimeError error) {
+        System.err.println("Runtime error in declaration: " + error.getMessage());
     }
+}
 
     private void execute(Stmt stmt) { stmt.accept(this); }
     private Object evaluate(Expr expr) { return expr.accept(this); }
