@@ -7,6 +7,7 @@ public abstract class Decl extends ASTNode {
         R visitImportDecl(ImportDecl importDecl);
         R visitAnnotation(Annotation annotation);
         R visitParam(Param param);
+        R visitResourceDecl(ResourceDecl resourceDecl);
     }
 
     public abstract <R> R accept(Visitor<R> visitor);

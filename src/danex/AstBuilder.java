@@ -48,6 +48,14 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
     }
 
     @Override
+    public Decl visitResourceDecl(ResourceDecl resourceDecl) {
+        String type = resourceDecl.type;
+        String name = resourceDecl.name;
+        Expr initializer = resourceDecl.initializer;
+        return new ResourceDecl(type, name, initializer);
+    }
+
+    @Override
     public Expr visitCallExpr(CallExpr callExpr) {
         Expr callee = callExpr.callee;
         List<Expr> arguments = callExpr.arguments;
@@ -152,12 +160,13 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
 
     @Override
     public Stmt visitTryStmt(TryStmt tryStmt) {
+        List<ResourceDecl> resources = tryStmt.resources;
         List<Stmt> tryBlock = tryStmt.tryBlock;
         String catchType = tryStmt.catchType;
         String catchName = tryStmt.catchName;
         List<Stmt> catchBlock = tryStmt.catchBlock;
         List<Stmt> finallyBlock = tryStmt.finallyBlock;
-        return new TryStmt(tryBlock, catchType, catchName, catchBlock, finallyBlock);
+        return new TryStmt(resources, tryBlock, catchType, catchName, catchBlock, finallyBlock);
     }
 
     @Override
@@ -175,7 +184,7 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
 
     @Override
     public Expr visitLambdaExpr(LambdaExpr lambdaExpr) {
-        List<String> params = lambdaExpr.params;
+        List<Param> params = lambdaExpr.params;
         Expr body = lambdaExpr.body;
         return new LambdaExpr(params, body);
     }
