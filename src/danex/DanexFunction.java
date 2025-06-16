@@ -17,15 +17,14 @@ public class DanexFunction implements DanexCallable {
     public Object call(Interpreter interpreter, List<Object> args) {
         Environment localEnv = new Environment(closure);
         for (int i = 0; i < declaration.params.size(); i++) {
-            String paramName = declaration.params.get(i).lexeme;
+            String paramName = declaration.params.get(i).name;
             Object argValue = i < args.size() ? args.get(i) : null;
             localEnv.define(paramName, argValue);
         }
 
         try {
-            for (Stmt stmt : declaration.body) {
-                interpreter.executeInEnvironment(stmt, localEnv);
-            }
+            // The method body is a single Stmt (probably BlockStmt)
+            interpreter.executeInEnvironment(declaration.body, localEnv);
         } catch (Interpreter.Return r) {
             return r.value;
         }
