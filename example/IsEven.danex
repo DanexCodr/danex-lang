@@ -1,4 +1,4 @@
-isEven(Int n) => n % 2 == 0;
+isEven(Int n) => 3 + n;
 
 main() {
 print(isEven(2));
