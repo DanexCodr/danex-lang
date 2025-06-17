@@ -117,132 +117,130 @@ public Object visitBinaryExpr(BinaryExpr binaryExpr) {
 
     switch (op) {
         case "+":
-            if (left instanceof String || right instanceof String)
+            if (left instanceof String || right instanceof String) {
                 return toStr(left) + toStr(right);
-            if (left instanceof Number && right instanceof Number)
+            }
+            if (left instanceof Number && right instanceof Number) {
                 return binaryOp("+", (Number) left, (Number) right);
+            }
             throw new RuntimeError("Operands must be two numbers or one must be string for '+'.");
-
         case "-":
         case "*":
         case "/":
         case "%":
-            if (left instanceof Number && right instanceof Number)
+            if (left instanceof Number && right instanceof Number) {
                 return binaryOp(op, (Number) left, (Number) right);
-            throw new RuntimeError("Operands must be numbers.");
-
+            }
+            throw new RuntimeError("Operands must be numbers for '" + op + "'.");
         case "<":
-            return compare(op, left, right) < 0;
+            return compare((Number)left, (Number)right) < 0;
         case ">":
-            return compare(op, left, right) > 0;
+            return compare((Number)left, (Number)right) > 0;
         case "<=":
-            return compare(op, left, right) <= 0;
+            return compare((Number)left, (Number)right) <= 0;
         case ">=":
-            return compare(op, left, right) >= 0;
-
+            return compare((Number)left, (Number)right) >= 0;
         case "==":
             return isEqual(left, right);
         case "!=":
             return !isEqual(left, right);
-
         case "&&":
             return isTruthy(left) && isTruthy(right);
         case "||":
             return isTruthy(left) || isTruthy(right);
-
         case "??":
             return left != null ? left : right;
-
         case "<=>":
-            return (double) compare(op, left, right);
-
+            // return numeric comparison as double or int? Here return a Double for consistency.
+            return (double) compare((Number)left, (Number)right);
         default:
             throw new RuntimeError("Unknown operator '" + op + "'.");
     }
-       }
+}
 
-   private Number binaryOp(String op, Number a, Number b) {
-    if (a instanceof Double || b instanceof Double) {
+private Number binaryOp(String op, Number a, Number b) {
+    // Decide division semantics: integer division or floating? Here: promote to Double only if literal had decimal or one operand Double.
+    boolean aIsFloating = (a instanceof Double || a instanceof Float);
+    boolean bIsFloating = (b instanceof Double || b instanceof Float);
+    if (aIsFloating || bIsFloating) {
         double x = a.doubleValue(), y = b.doubleValue();
-        return switch (op) {
-            case "+" -> x + y;
-            case "-" -> x - y;
-            case "*" -> x * y;
-            case "/" -> {
+        switch (op) {
+            case "+": return x + y;
+            case "-": return x - y;
+            case "*": return x * y;
+            case "/":
                 if (y == 0) throw new RuntimeError("Division by zero.");
-                yield x / y;
-            }
-            case "%" -> x % y;
-            default -> throw new RuntimeError("Unknown numeric operator: " + op);
-        };
-    } else if (a instanceof Float || b instanceof Float) {
-        float x = a.floatValue(), y = b.floatValue();
-        return switch (op) {
-            case "+" -> x + y;
-            case "-" -> x - y;
-            case "*" -> x * y;
-            case "/" -> {
+                return x / y;
+            case "%":
                 if (y == 0) throw new RuntimeError("Division by zero.");
-                yield x / y;
-            }
-            case "%" -> x % y;
-            default -> throw new RuntimeError("Unknown numeric operator: " + op);
-        };
+                return x % y;
+        }
     } else if (a instanceof Long || b instanceof Long) {
         long x = a.longValue(), y = b.longValue();
-        return switch (op) {
-            case "+" -> x + y;
-            case "-" -> x - y;
-            case "*" -> x * y;
-            case "/" -> {
+        switch (op) {
+            case "+": return x + y;
+            case "-": return x - y;
+            case "*": return x * y;
+            case "/":
                 if (y == 0) throw new RuntimeError("Division by zero.");
-                yield x / y;
-            }
-            case "%" -> x % y;
-            default -> throw new RuntimeError("Unknown numeric operator: " + op);
-        };
+                // Decide: integer division truncated
+                return x / y;
+            case "%":
+                if (y == 0) throw new RuntimeError("Division by zero.");
+                return x % y;
+        }
     } else {
+        // treat as Integer
         int x = a.intValue(), y = b.intValue();
-        return switch (op) {
-            case "+" -> x + y;
-            case "-" -> x - y;
-            case "*" -> x * y;
-            case "/" -> {
+        switch (op) {
+            case "+": return x + y;
+            case "-": return x - y;
+            case "*": return x * y;
+            case "/":
                 if (y == 0) throw new RuntimeError("Division by zero.");
-                yield x / y;
+                return x / y; // integer division
+            case "%":
+                if (y == 0) throw new RuntimeError("Division by zero.");
+                return x % y;
+        }
+    }
+    throw new RuntimeError("Unknown numeric operator: " + op);
+}
+
+private int compare(Number a, Number b) {
+    // Here compare via double for simplicity; or you can detect both Long or both Integer for exact compare
+    double x = a.doubleValue(), y = b.doubleValue();
+    return Double.compare(x, y);
+}
+
+@Override
+public Object visitUnaryExpr(UnaryExpr unaryExpr) {
+    Object rightVal = evaluate(unaryExpr.right);
+    String opu = unaryExpr.operator;
+    switch (opu) {
+        case "-":
+            if (!(rightVal instanceof Number)) {
+                throw new RuntimeError("Operand must be a number for unary '-'.");
             }
-            case "%" -> x % y;
-            default -> throw new RuntimeError("Unknown numeric operator: " + op);
-        };
+            Number num = (Number) rightVal;
+            if (num instanceof Double) {
+                return -num.doubleValue();
+            } else if (num instanceof Float) {
+                return -num.floatValue();
+            } else if (num instanceof Long) {
+                return -num.longValue();
+            } else {
+                // Integer
+                return -num.intValue();
+            }
+        case "!":
+            return !isTruthy(rightVal);
+        default:
+            throw new RuntimeError("Unknown unary operator '" + opu + "'.");
     }
 }
 
-private int compare(String op, Object a, Object b) {
-    if (a instanceof Number && b instanceof Number) {
-        double x = ((Number) a).doubleValue();
-        double y = ((Number) b).doubleValue();
-        return Double.compare(x, y); // returns -1, 0, or 1
-    }
-    throw new RuntimeError("Operands must be numbers for comparison.");
-                   }
-//-----------------
-@Override  
-public Object visitUnaryExpr(UnaryExpr unaryExpr) {  
-    Object rightVal = evaluate(unaryExpr.right);  
-    String opu = unaryExpr.operator;  
-    switch (opu) {  
-        case "-":  
-            checkNumberOperand(opu, rightVal);  
-            return -toNumber(rightVal);  
-        case "!":  
-            return !isTruthy(rightVal);  
-        default:  
-            throw new RuntimeError("Unknown unary operator '" + opu + "'.");  
-    }  
-}  
-
 @Override
-
 public Object visitCallExpr(CallExpr callExpr) {
 Object callee = evaluate(callExpr.callee);
 List<Object> args = new ArrayList<>();
