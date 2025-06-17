@@ -764,7 +764,7 @@ return (BlockStmt) builder.visitBlockStmt(block);
     }
 
     @Override
-public Object visitUnaryExpr(UnaryExpr unaryExpr) {
+public Object visitUnaryExpr(Danex.UnaryExprContext unaryExpr) {
     Object rightVal = evaluate(unaryExpr.right);
     String opu = unaryExpr.operator;
     switch (opu) {
