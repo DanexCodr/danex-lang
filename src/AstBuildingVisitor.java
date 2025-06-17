@@ -764,15 +764,31 @@ return (BlockStmt) builder.visitBlockStmt(block);
     }
 
     @Override
-    public Object visitUnaryExpr(DanexParser.UnaryExprContext ctx) {
-        Expr expr = (Expr) visit(ctx.primaryExpr());
-        for (int i = ctx.getChildCount() - 2; i >= 0; i--) {
-            String op = ctx.getChild(i).getText();
-            UnaryExpr u = new UnaryExpr(op, expr);
-            expr = (UnaryExpr) builder.visitUnaryExpr(u);
-        }
-        return expr;
+public Object visitUnaryExpr(UnaryExpr unaryExpr) {
+    Object rightVal = evaluate(unaryExpr.right);
+    String opu = unaryExpr.operator;
+    switch (opu) {
+        case "-":
+            if (!(rightVal instanceof Number)) {
+                throw new RuntimeError("Operand must be a number for unary '-'.");
+            }
+            Number num = (Number) rightVal;
+            if (num instanceof Double) {
+                return -num.doubleValue();
+            } else if (num instanceof Float) {
+                return -num.floatValue();
+            } else if (num instanceof Long) {
+                return -num.longValue();
+            } else {
+                // Integer
+                return -num.intValue();
+            }
+        case "!":
+            return !isTruthy(rightVal);
+        default:
+            throw new RuntimeError("Unknown unary operator '" + opu + "'.");
     }
+}
 
     // -------------------
     // Primary expressions
@@ -819,25 +835,38 @@ return (BlockStmt) builder.visitBlockStmt(block);
     }
 
     @Override
-    public Object visitLiteral(DanexParser.LiteralContext ctx) {
-        Object value;
-        if (ctx.NUMBER() != null) {
-            value = Double.parseDouble(ctx.NUMBER().getText());
-        } else if (ctx.STRING() != null) {
-            String text = ctx.STRING().getText();
-            value = text.substring(1, text.length() - 1);
-        } else if (ctx.TRUE() != null) {
-            value = Boolean.TRUE;
-        } else if (ctx.FALSE() != null) {
-            value = Boolean.FALSE;
-        } else if (ctx.NULL() != null) {
-            value = null;
+public Object visitLiteral(DanexParser.LiteralContext ctx) {
+    Object value;
+    if (ctx.NUMBER() != null) {
+        String text = ctx.NUMBER().getText();
+        if (text.contains(".")) {
+            // Floating literal: keep as Double
+            value = Double.parseDouble(text);
         } else {
-            throw new RuntimeException("Unknown literal: " + ctx.getText());
+            // Integer literal: parse as Integer if in int range, otherwise Long
+            try {
+                value = Integer.parseInt(text);
+            } catch (NumberFormatException e) {
+                // too big for int?
+                value = Long.parseLong(text);
+            }
         }
-        LiteralExpr lit = new LiteralExpr(value);
-        return builder.visitLiteralExpr(lit);
+    } else if (ctx.STRING() != null) {
+        String text = ctx.STRING().getText();
+        // remove quotes; handle escapes as needed
+        value = text.substring(1, text.length() - 1);
+    } else if (ctx.TRUE() != null) {
+        value = Boolean.TRUE;
+    } else if (ctx.FALSE() != null) {
+        value = Boolean.FALSE;
+    } else if (ctx.NULL() != null) {
+        value = null;
+    } else {
+        throw new RuntimeException("Unknown literal: " + ctx.getText());
     }
+    LiteralExpr lit = new LiteralExpr(value);
+    return builder.visitLiteralExpr(lit);
+        }
 
     // -------------------
     // Do-expression
