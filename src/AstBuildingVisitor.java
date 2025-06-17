@@ -763,32 +763,22 @@ return (BlockStmt) builder.visitBlockStmt(block);
         return left;
     }
 
-    @Override
-public Object visitUnaryExpr(Danex.UnaryExprContext unaryExpr) {
-    Object rightVal = evaluate(unaryExpr.right);
-    String opu = unaryExpr.operator;
-    switch (opu) {
-        case "-":
-            if (!(rightVal instanceof Number)) {
-                throw new RuntimeError("Operand must be a number for unary '-'.");
-            }
-            Number num = (Number) rightVal;
-            if (num instanceof Double) {
-                return -num.doubleValue();
-            } else if (num instanceof Float) {
-                return -num.floatValue();
-            } else if (num instanceof Long) {
-                return -num.longValue();
-            } else {
-                // Integer
-                return -num.intValue();
-            }
-        case "!":
-            return !isTruthy(rightVal);
-        default:
-            throw new RuntimeError("Unknown unary operator '" + opu + "'.");
+@Override
+public Object visitUnaryExpr(DanexParser.UnaryExprContext ctx) {
+    // First, build the AST for the primary expression:
+    Expr expr = (Expr) visit(ctx.primaryExpr());
+
+    // Then wrap in prefix operators. The parse tree children are a sequence of operator tokens, then the primaryExpr.
+    // We iterate in reverse so that nesting matches textual order:
+    int childCount = ctx.getChildCount();
+    // childCount >= 1; last child is primaryExpr, preceding are operators
+    for (int i = childCount - 2; i >= 0; i--) {
+        String op = ctx.getChild(i).getText();
+        UnaryExpr u = new UnaryExpr(op, expr);
+        expr = (UnaryExpr) builder.visitUnaryExpr(u);
     }
-}
+    return expr;
+        }
 
     // -------------------
     // Primary expressions
