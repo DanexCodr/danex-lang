@@ -208,6 +208,18 @@ public class DanexParserBaseListener implements DanexParserListener {
 	 *
 	 * <p>The default implementation does nothing.</p>
 	 */
+	@Override public void enterVarDecl(DanexParser.VarDeclContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitVarDecl(DanexParser.VarDeclContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
 	@Override public void enterExpressionStatement(DanexParser.ExpressionStatementContext ctx) { }
 	/**
 	 * {@inheritDoc}

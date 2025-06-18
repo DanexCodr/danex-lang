@@ -107,6 +107,12 @@ public interface DanexParserVisitor<T> extends ParseTreeVisitor<T> {
 	 */
 	T visitBlockContent(DanexParser.BlockContentContext ctx);
 	/**
+	 * Visit a parse tree produced by {@link DanexParser#varDecl}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitVarDecl(DanexParser.VarDeclContext ctx);
+	/**
 	 * Visit a parse tree produced by {@link DanexParser#expressionStatement}.
 	 * @param ctx the parse tree
 	 * @return the visitor result

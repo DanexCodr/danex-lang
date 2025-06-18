@@ -168,6 +168,16 @@ public interface DanexParserListener extends ParseTreeListener {
 	 */
 	void exitBlockContent(DanexParser.BlockContentContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link DanexParser#varDecl}.
+	 * @param ctx the parse tree
+	 */
+	void enterVarDecl(DanexParser.VarDeclContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link DanexParser#varDecl}.
+	 * @param ctx the parse tree
+	 */
+	void exitVarDecl(DanexParser.VarDeclContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link DanexParser#expressionStatement}.
 	 * @param ctx the parse tree
 	 */
