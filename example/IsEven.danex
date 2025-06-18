@@ -1,4 +1,4 @@
-isEven(Int n) => 3 + n;
+isEven(n) => 3 + n;
 
 main() {
 print(isEven(2));
