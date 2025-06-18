@@ -1,10 +1,7 @@
 package danex;
 
-import org.antlr.v4.runtime.CharStream;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.ParseTree;
-
 import danex.grammar.DanexLexer;
 import danex.grammar.DanexParser;
 import danex.ast.Decl;
@@ -24,8 +21,23 @@ public class Main {
 
         DanexLexer lexer = new DanexLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
-        DanexParser parser = new DanexParser(tokens);
 
+        // --- Token dump for debugging ---
+        tokens.fill();
+        Vocabulary vocab = lexer.getVocabulary();
+        System.out.println("=== Token dump for " + inputPath + " ===");
+        for (Token t : tokens.getTokens()) {
+            if (t.getType() == Token.EOF) {
+                System.out.println("EOF");
+            } else {
+                String name = vocab.getSymbolicName(t.getType());
+                String text = t.getText().replace("\u00A0", "<NBSP>");
+                System.out.printf("  %-15s -> '%s'%n", name, text);
+            }
+        }
+        System.out.println("=== End token dump ===");
+
+        DanexParser parser = new DanexParser(tokens);
         ParseTree tree = parser.compilationUnit();
 
         AstBuilder builder = new AstBuilder();
