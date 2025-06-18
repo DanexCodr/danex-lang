@@ -1,4 +1,9 @@
-isEven(n) => 3 + n;
+isEven(n) {
+if (n = 5) {
+isEven = 3 + n;
+}
+isEven = n;
+}
 
 main() {
 print(isEven(2));
