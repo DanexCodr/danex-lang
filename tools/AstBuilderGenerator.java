@@ -18,7 +18,9 @@ public class AstBuilderGenerator {
         "Annotation",
         "Param",
         "ResourceDecl",
-        "ExprStmt"
+        "ExprStmt",
+        "ReturnSpec",
+        "ParamDecl"
     );
 
     public static void main(String[] args) {
@@ -134,7 +136,7 @@ public class AstBuilderGenerator {
 
         List<String> argNames = new ArrayList<>();
         for (Field f : cls.fields) {
-            boolean isAstNode = f.type.equals("Expr") || f.type.equals("Stmt") || f.type.equals("Decl");
+            boolean isAstNode = f.type.equals("Expr") || f.type.equals("Stmt") || f.type.equals("Decl") || f.type.equals("BlockStmt") || f.type.equals("ReturnSpec") || f.type.equals("ParamDecl");
             String rhs = isAstNode
                 ? paramName + "." + f.name + ".accept(this)"
                 : paramName + "." + f.name;
