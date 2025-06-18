@@ -1,4 +1,4 @@
-isEven(n) {
+isEven(Int n) {
 if (n = 5) {
 isEven = 3 + n;
 }
