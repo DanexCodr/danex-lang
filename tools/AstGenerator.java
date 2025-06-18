@@ -7,7 +7,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
-// Generates AST node classes in src/danex/ast
+// Generates AST node classes in src/danex/ast, updated for ReturnSpec and ParamDecl, MethodDecl with arrow support
 public class AstGenerator {
     private static final String OUTPUT_DIR = "src/danex/ast";
 
@@ -30,7 +30,7 @@ public class AstGenerator {
             new NodeDef("VariableExpr", Arrays.asList("String name")),
             new NodeDef("AssignExpr", Arrays.asList("String name", "Expr value")),
             new NodeDef("CallExpr", Arrays.asList("Expr callee", "List<Expr> arguments")),
-            new NodeDef("LambdaExpr", Arrays.asList("List<Param> params", "Expr body")),
+            new NodeDef("LambdaExpr", Arrays.asList("List<ParamDecl> params", "Expr body")),
             new NodeDef("DoExpr", Arrays.asList("List<Stmt> body")),
             new NodeDef("TryExpr", Arrays.asList(
                 "List<Stmt> tryBlock", "String catchType", "String catchName",
@@ -65,9 +65,9 @@ public class AstGenerator {
 
         List<NodeDef> declNodes = Arrays.asList(
             new NodeDef("MethodDecl", Arrays.asList(
-                "String name", "String resultType", "String resultName",
+                "String name", "ReturnSpec returnSpec",
                 "List<Annotation> annotations", "List<String> modifiers",
-                "List<Param> params", "Stmt body"
+                "List<ParamDecl> params", "BlockStmt body", "Expr exprBody", "boolean isArrow"
             )),
             new NodeDef("ClassDecl", Arrays.asList(
                 "String name", "List<Annotation> annotations",
@@ -75,11 +75,13 @@ public class AstGenerator {
             )),
             new NodeDef("ImportDecl", Arrays.asList("String moduleName", "String alias")),
             new NodeDef("Annotation", Arrays.asList("String name")),
-            new NodeDef("Param", Arrays.asList("String type", "String name", "boolean varargs")),
+            new NodeDef("ParamDecl", Arrays.asList("TypeNode type", "String name", "boolean varargs")),
             new NodeDef("ResourceDecl", Arrays.asList("String type", "String name", "Expr initializer"))
         );
         for (NodeDef nd : declNodes) generateDeclSubclass(nd);
 
+        // Additionally, generate ReturnSpec and TypeNode skeleton if not present:
+        generateReturnSpec();
         System.out.println("AST classes generated in " + OUTPUT_DIR);
     }
 
@@ -98,7 +100,7 @@ public class AstGenerator {
         try (BufferedWriter w = Files.newBufferedWriter(file)) {
             w.write("package " + pkg + ";\n\n");
             w.write("public abstract class ASTNode {\n");
-            w.write("    // Base for all AST nodes. You may add common info like source position.\n");
+            w.write("    // Base for all AST nodes. Add source position if desired.\n");
             w.write("}\n");
         }
     }
@@ -154,7 +156,7 @@ public class AstGenerator {
             w.write("        R visitClassDecl(ClassDecl classDecl);\n");
             w.write("        R visitImportDecl(ImportDecl importDecl);\n");
             w.write("        R visitAnnotation(Annotation annotation);\n");
-            w.write("        R visitParam(Param param);\n");
+            w.write("        R visitParamDecl(ParamDecl paramDecl);\n");
             w.write("        R visitResourceDecl(ResourceDecl resourceDecl);\n");
             w.write("    }\n\n");
             w.write("    public abstract <R> R accept(Visitor<R> visitor);\n");
@@ -181,9 +183,11 @@ public class AstGenerator {
             w.write("package " + pkg + ";\n\n");
             w.write("import java.util.*;\n");
             w.write("public class " + nd.className + " extends " + baseClass + " {\n");
+            // Fields
             for (String field : nd.fields) {
                 w.write("    public final " + field + ";\n");
             }
+            // Constructor
             w.write("\n    public " + nd.className + "(");
             for (int i = 0; i < nd.fields.size(); i++) {
                 w.write(nd.fields.get(i));
@@ -191,13 +195,42 @@ public class AstGenerator {
             }
             w.write(") {\n");
             for (String field : nd.fields) {
-                String name = field.split(" ")[1];
+                String[] parts = field.split(" ");
+                String name = parts[parts.length - 1];
                 w.write("        this." + name + " = " + name + ";\n");
             }
             w.write("    }\n\n");
+            // accept()
             w.write("    @Override\n");
             w.write("    public <R> R accept(" + baseClass + ".Visitor<R> visitor) {\n");
             w.write("        return visitor.visit" + nd.className + "(this);\n");
+            w.write("    }\n");
+            w.write("}\n");
+        }
+    }
+
+    private static void generateReturnSpec() throws IOException {
+        String pkg = "danex.ast";
+        Path file = Paths.get(OUTPUT_DIR, "ReturnSpec.java");
+        if (Files.exists(file)) return; // do not overwrite if user has custom implementation
+        try (BufferedWriter w = Files.newBufferedWriter(file)) {
+            w.write("package " + pkg + ";\n\n");
+            w.write("/**\n");
+            w.write(" * Represents return specification: optional type and optional name.\n");
+            w.write(" */\n");
+            w.write("public class ReturnSpec extends ASTNode {\n");
+            w.write("    public final TypeNode type; // may be null\n");
+            w.write("    public final String name;   // may be null\n");
+            w.write("    public ReturnSpec(TypeNode type, String name) {\n");
+            w.write("        this.type = type;\n");
+            w.write("        this.name = name;\n");
+            w.write("    }\n");
+            w.write("    @Override\n");
+            w.write("    public String toString() {\n");
+            w.write("        if (type != null && name != null) return \"(" + type + \" " + name + \")\";\n");
+            w.write("        if (type == null && name != null) return \"(" + name + \")\";\n");
+            w.write("        if (type != null) return \"(" + type + \")\";\n");
+            w.write("        return \"\";\n");
             w.write("    }\n");
             w.write("}\n");
         }
