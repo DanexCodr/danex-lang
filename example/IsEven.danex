@@ -1,5 +1,5 @@
 isEven(Int n) {
-if (n = 5) {
+if (n == 5) {
 isEven = 3 + n;
 }
 isEven = n;
