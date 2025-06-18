@@ -1,4 +1,3 @@
-// Updated DanexParser.g4
 parser grammar DanexParser;
 options { tokenVocab=DanexLexer; }
 
@@ -75,6 +74,7 @@ block
 
 blockContent
     : statement
+    | varDecl
     | expressionStatement
     | ifStatement
     | whileStatement
@@ -84,6 +84,10 @@ blockContent
     | exitStatement
     | throwStatement
     | returnStatement
+    ;
+
+varDecl
+    : type IDENTIFIER (EQ expression)? SEMI
     ;
 
 expressionStatement
@@ -130,9 +134,8 @@ returnStatement
     : RETURN expression? SEMI
     ;
 
-// Allow compound assignments
 assignment
-    : IDENTIFIER assignOp assignment
+    : IDENTIFIER assignOp expression
     ;
 
 assignOp
@@ -177,7 +180,6 @@ multiplicativeExpr
     : unaryExpr ((STAR | DIV | MOD | MOD2) unaryExpr)*
     ;
 
-// Fixed unaryExpr: allow multiple prefix operators but no left recursion
 unaryExpr
     : (BANG | PLUS | MINUS | AWAIT)* primaryExpr
     ;
