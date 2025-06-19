@@ -1,6 +1,8 @@
 name: Generate AST, AstBuilder, Interpreter
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -96,17 +98,26 @@ jobs:
           mkdir -p src/danex/ast bin/ast-gen
           javac -cp "parser.jar:lib/antlr-4.9.2-complete.jar" -d bin/ast-gen tools/AstGenerator.java
           java -cp "bin/ast-gen:parser.jar:lib/antlr-4.9.2-complete.jar" tools.AstGenerator
-
-      - name: Generate AstBuilder
+      - name: Generate AstBuilder if missing
         run: |
-          javac -d bin tools/AstBuilderGenerator.java
-          java -cp bin tools.AstBuilderGenerator
+          if [ ! -f src/danex/AstBuilder.java ]; then
+            echo "⚙️ Generating AstBuilder.java..."
+            javac -d bin tools/AstBuilderGenerator.java
+            java -cp bin tools.AstBuilderGenerator
+          else
+            echo "✅ AstBuilder.java already exists. Skipping generation."
+          fi
 
-      - name: Generate Interpreter skeleton
+      - name: Generate Interpreter skeleton if missing
         run: |
-          javac -cp "bin:parser.jar:lib/antlr-4.9.2-complete.jar" -d bin tools/InterpreterTemplateGenerator.java
-          java -cp "bin:parser.jar:lib/antlr-4.9.2-complete.jar" tools.InterpreterTemplateGenerator
-
+          if [ ! -f src/danex/Interpreter.java ]; then
+            echo "⚙️ Generating Interpreter.java..."
+            javac -cp "bin:parser.jar:lib/antlr-4.9.2-complete.jar" -d bin tools/InterpreterTemplateGenerator.java
+            java -cp "bin:parser.jar:lib/antlr-4.9.2-complete.jar" tools.InterpreterTemplateGenerator
+          else
+            echo "✅ Interpreter.java already exists. Skipping generation."
+          fi
+    
       - name: Show generated files
         run: |
           echo "AST classes:"
