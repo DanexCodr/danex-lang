@@ -2,10 +2,10 @@ package danex.ast;
 
 import java.util.*;
 public class LambdaExpr extends Expr {
-    public final List<Param> params;
+    public final List<ParamDecl> params;
     public final Expr body;
 
-    public LambdaExpr(List<Param> params, Expr body) {
+    public LambdaExpr(List<ParamDecl> params, Expr body) {
         this.params = params;
         this.body = body;
     }

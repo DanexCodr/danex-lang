@@ -21,13 +21,14 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
     @Override
     public Decl visitMethodDecl(MethodDecl methodDecl) {
         String name = methodDecl.name;
-        String resultType = methodDecl.resultType;
-        String resultName = methodDecl.resultName;
+        ReturnSpec returnSpec = methodDecl.returnSpec.accept(this);
         List<Annotation> annotations = methodDecl.annotations;
         List<String> modifiers = methodDecl.modifiers;
-        List<Param> params = methodDecl.params;
-        Stmt body = methodDecl.body.accept(this);
-        return new MethodDecl(name, resultType, resultName, annotations, modifiers, params, body);
+        List<ParamDecl> params = methodDecl.params;
+        BlockStmt body = methodDecl.body.accept(this);
+        Expr exprBody = methodDecl.exprBody.accept(this);
+        boolean isArrow = methodDecl.isArrow;
+        return new MethodDecl(name, returnSpec, annotations, modifiers, params, body, exprBody, isArrow);
     }
 
     @Override
@@ -171,7 +172,7 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
 
     @Override
     public Expr visitLambdaExpr(LambdaExpr lambdaExpr) {
-        List<Param> params = lambdaExpr.params;
+        List<ParamDecl> params = lambdaExpr.params;
         Expr body = lambdaExpr.body.accept(this);
         return new LambdaExpr(params, body);
     }
