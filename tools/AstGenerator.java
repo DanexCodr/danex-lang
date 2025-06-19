@@ -210,31 +210,31 @@ public class AstGenerator {
     }
 
     private static void generateReturnSpec() throws IOException {
-        String pkg = "danex.ast";
-        Path file = Paths.get(OUTPUT_DIR, "ReturnSpec.java");
-        if (Files.exists(file)) return; // do not overwrite if user has custom implementation
-        try (BufferedWriter w = Files.newBufferedWriter(file)) {
-            w.write("package " + pkg + ";\n\n");
-            w.write("/**\n");
-            w.write(" * Represents return specification: optional type and optional name.\n");
-            w.write(" */\n");
-            w.write("public class ReturnSpec extends ASTNode {\n");
-            w.write("    public final TypeNode type; // may be null\n");
-            w.write("    public final String name;   // may be null\n");
-            w.write("    public ReturnSpec(TypeNode type, String name) {\n");
-            w.write("        this.type = type;\n");
-            w.write("        this.name = name;\n");
-            w.write("    }\n");
-            w.write("    @Override\n");
-            w.write("    public String toString() {\n");
-            w.write("        if (type != null && name != null) return \"(" + type + \" " + name + \")\";\n");
-            w.write("        if (type == null && name != null) return \"(" + name + \")\";\n");
-            w.write("        if (type != null) return \"(" + type + \")\";\n");
-            w.write("        return \"\";\n");
-            w.write("    }\n");
-            w.write("}\n");
-        }
+    String pkg = "danex.ast";
+    Path file = Paths.get(OUTPUT_DIR, "ReturnSpec.java");
+    if (Files.exists(file)) return; // do not overwrite if user has custom implementation
+    try (BufferedWriter w = Files.newBufferedWriter(file)) {
+        w.write("package " + pkg + ";\\n\\n");
+        w.write("/**\\n");
+        w.write(" * Represents return specification: optional type and optional name.\\n");
+        w.write(" */\\n");
+        w.write("public class ReturnSpec extends ASTNode {\\n");
+        w.write("    public final TypeNode type; // may be null\\n");
+        w.write("    public final String name;   // may be null\\n");
+        w.write("    public ReturnSpec(TypeNode type, String name) {\\n");
+        w.write("        this.type = type;\\n");
+        w.write("        this.name = name;\\n");
+        w.write("    }\\n");
+        w.write("    @Override\\n");
+        w.write("    public String toString() {\\n");
+        w.write("        if (type != null && name != null) return \"(\" + type + \" \" + name + \")\";\\n");
+        w.write("        if (type == null && name != null)   return \"(\" + name + \")\";\\n");
+        w.write("        if (type != null)                   return \"(\" + type + \")\";\\n");
+        w.write("        return \"\";\\n");
+        w.write("    }\\n");
+        w.write("}\\n");
     }
+}
 
     private static String decap(String s) {
         if (s == null || s.isEmpty()) return s;
