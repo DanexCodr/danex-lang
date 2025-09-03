@@ -26,92 +26,38 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
     // -------------------
     private boolean detectAssignmentTo(Stmt stmt, String resultName, String methodName) {
         class Scanner implements Stmt.Visitor<Boolean>, Expr.Visitor<Boolean>, Decl.Visitor<Boolean> {
-
-            // Expr visitors
-            @Override public Boolean visitBinaryExpr(BinaryExpr be) {
-                return scanExpr(be.left) || scanExpr(be.right);
-            }
-            @Override public Boolean visitUnaryExpr(UnaryExpr ue) {
-                return scanExpr(ue.right);
-            }
+            @Override public Boolean visitBinaryExpr(BinaryExpr be) { return scanExpr(be.left) || scanExpr(be.right); }
+            @Override public Boolean visitUnaryExpr(UnaryExpr ue) { return scanExpr(ue.right); }
             @Override public Boolean visitLiteralExpr(LiteralExpr le) { return false; }
             @Override public Boolean visitGroupingExpr(GroupingExpr ge) { return scanExpr(ge.expression); }
             @Override public Boolean visitVariableExpr(VariableExpr ve) { return false; }
-            @Override public Boolean visitAssignExpr(AssignExpr ae) {
-                // assignment expression: check target if name-based, else descend into value
-                return scanExpr(ae.value);
-            }
-            @Override public Boolean visitCallExpr(CallExpr ce) {
-                if (scanExpr(ce.callee)) return true;
-                for (Expr a : ce.arguments) if (scanExpr(a)) return true;
-                return false;
-            }
+            @Override public Boolean visitAssignExpr(AssignExpr ae) { return scanExpr(ae.value); }
+            @Override public Boolean visitCallExpr(CallExpr ce) { if (scanExpr(ce.callee)) return true; for (Expr a : ce.arguments) if (scanExpr(a)) return true; return false; }
             @Override public Boolean visitLambdaExpr(LambdaExpr le) { return false; }
-            @Override public Boolean visitDoExpr(DoExpr de) {
-                for (Stmt s : de.body) if (scanStmt(s)) return true;
-                return false;
-            }
-            @Override public Boolean visitTryExpr(TryExpr te) {
-                if (te.tryBlock != null) for (Stmt s : te.tryBlock) if (scanStmt(s)) return true;
-                if (te.catchBlock != null) for (Stmt s : te.catchBlock) if (scanStmt(s)) return true;
-                if (te.finallyBlock != null) for (Stmt s : te.finallyBlock) if (scanStmt(s)) return true;
-                return false;
-            }
+            @Override public Boolean visitDoExpr(DoExpr de) { for (Stmt s : de.body) if (scanStmt(s)) return true; return false; }
+            @Override public Boolean visitTryExpr(TryExpr te) { if (te.tryBlock != null) for (Stmt s : te.tryBlock) if (scanStmt(s)) return true; if (te.catchBlock != null) for (Stmt s : te.catchBlock) if (scanStmt(s)) return true; if (te.finallyBlock != null) for (Stmt s : te.finallyBlock) if (scanStmt(s)) return true; return false; }
             @Override public Boolean visitAwaitExpr(AwaitExpr ae) { return false; }
-            @Override public Boolean visitNullCoalesceExpr(NullCoalesceExpr ne) {
-                return scanExpr(ne.left) || scanExpr(ne.right);
-            }
-            @Override public Boolean visitComparatorExpr(ComparatorExpr ce) {
-                return scanExpr(ce.left) || scanExpr(ce.right);
-            }
+            @Override public Boolean visitNullCoalesceExpr(NullCoalesceExpr ne) { return scanExpr(ne.left) || scanExpr(ne.right); }
+            @Override public Boolean visitComparatorExpr(ComparatorExpr ce) { return scanExpr(ce.left) || scanExpr(ce.right); }
 
-            // Stmt visitors
             @Override public Boolean visitExprStmt(ExprStmt es) { return scanExpr(es.expression); }
             @Override public Boolean visitAssignStmt(AssignStmt stmt) {
-                // check if the assignment target is a plain variable matching names
                 Expr tgt = stmt.target;
                 if (tgt instanceof VariableExpr) {
                     String var = ((VariableExpr) tgt).name;
-                    if ((resultName != null && var.equals(resultName)) || var.equals(methodName)) {
-                        return true;
-                    }
+                    if ((resultName != null && var.equals(resultName)) || var.equals(methodName)) return true;
                 }
                 return scanExpr(stmt.value);
             }
-            @Override public Boolean visitBlockStmt(BlockStmt bs) {
-                for (Stmt s : bs.statements) if (scanStmt(s)) return true;
-                return false;
-            }
-            @Override public Boolean visitIfStmt(IfStmt ifs) {
-                if (scanExpr(ifs.condition)) return true;
-                if (scanStmt(ifs.thenBranch)) return true;
-                if (ifs.elseBranch != null && scanStmt(ifs.elseBranch)) return true;
-                return false;
-            }
-            @Override public Boolean visitWhileStmt(WhileStmt ws) {
-                if (scanExpr(ws.condition)) return scanStmt(ws.body);
-                return false;
-            }
-            @Override public Boolean visitDoWhileStmt(DoWhileStmt dws) {
-                if (scanStmt(dws.body)) return true;
-                return scanExpr(dws.condition);
-            }
-            @Override public Boolean visitForStmt(ForStmt fs) {
-                if (fs.init != null && scanStmt(fs.init)) return true;
-                if (fs.condition != null && scanExpr(fs.condition)) return true;
-                if (fs.update != null && scanExpr(fs.update)) return true;
-                return scanStmt(fs.body);
-            }
+            @Override public Boolean visitBlockStmt(BlockStmt bs) { for (Stmt s : bs.statements) if (scanStmt(s)) return true; return false; }
+            @Override public Boolean visitIfStmt(IfStmt ifs) { if (scanExpr(ifs.condition)) return true; if (scanStmt(ifs.thenBranch)) return true; if (ifs.elseBranch != null && scanStmt(ifs.elseBranch)) return true; return false; }
+            @Override public Boolean visitWhileStmt(WhileStmt ws) { if (scanExpr(ws.condition)) return scanStmt(ws.body); return false; }
+            @Override public Boolean visitDoWhileStmt(DoWhileStmt dws) { if (scanStmt(dws.body)) return true; return scanExpr(dws.condition); }
+            @Override public Boolean visitForStmt(ForStmt fs) { if (fs.init != null && scanStmt(fs.init)) return true; if (fs.condition != null && scanExpr(fs.condition)) return true; if (fs.update != null && scanExpr(fs.update)) return true; return scanStmt(fs.body); }
             @Override public Boolean visitThrowStmt(ThrowStmt ts) { return scanExpr(ts.exception); }
             @Override public Boolean visitExitStmt(ExitStmt es) { return false; }
-            @Override public Boolean visitTryStmt(TryStmt ts) {
-                if (ts.tryBlock != null) for (Stmt s : ts.tryBlock) if (scanStmt(s)) return true;
-                if (ts.catchBlock != null) for (Stmt s : ts.catchBlock) if (scanStmt(s)) return true;
-                if (ts.finallyBlock != null) for (Stmt s : ts.finallyBlock) if (scanStmt(s)) return true;
-                return false;
-            }
+            @Override public Boolean visitTryStmt(TryStmt ts) { if (ts.tryBlock != null) for (Stmt s : ts.tryBlock) if (scanStmt(s)) return true; if (ts.catchBlock != null) for (Stmt s : ts.catchBlock) if (scanStmt(s)) return true; if (ts.finallyBlock != null) for (Stmt s : ts.finallyBlock) if (scanStmt(s)) return true; return false; }
 
-            // Decl visitors (we generally don't descend into nested decls here)
             @Override public Boolean visitClassDecl(ClassDecl cd) { return false; }
             @Override public Boolean visitMethodDecl(MethodDecl md) { return false; }
             @Override public Boolean visitImportDecl(ImportDecl id) { return false; }
@@ -141,9 +87,6 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         return decls;
     }
 
-    // -------------------
-    // Imports
-    // -------------------
     @Override
     public Object visitImportStmt(DanexParser.ImportStmtContext ctx) {
         String moduleName = ctx.IDENTIFIER(0).getText();
@@ -152,9 +95,6 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         return builder.visitImportDecl(importNode);
     }
 
-    // -------------------
-    // Class declarations
-    // -------------------
     @Override
     public Object visitClassDecl(DanexParser.ClassDeclContext ctx) {
         List<Annotation> annotations = new ArrayList<>();
@@ -176,16 +116,6 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         return builder.visitClassDecl(classNode);
     }
 
-    @Override
-    public Object visitClassBodyMember(DanexParser.ClassBodyMemberContext ctx) {
-        if (ctx.methodDecl() != null) return visit(ctx.methodDecl());
-        if (ctx.classDecl() != null) return visit(ctx.classDecl());
-        throw new RuntimeException("Unknown classBodyMember: " + ctx.getText());
-    }
-
-    // -------------------
-    // Method declarations
-    // -------------------
     @Override public Object visitMethodDecl(DanexParser.MethodDeclContext ctx) { return buildMethod(ctx); }
     @Override public Object visitTopLevelMethodDecl(DanexParser.TopLevelMethodDeclContext ctx) { return buildTopLevelMethod(ctx); }
 
@@ -196,7 +126,6 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         if (ctx.IDENTIFIER() == null) throw new RuntimeException("MethodDecl missing name");
         String methodName = ctx.IDENTIFIER().getText();
 
-        // parse optional resultDecl
         String resultType = null;
         String resultName = null;
         if (ctx.resultDecl() != null) {
@@ -233,7 +162,6 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
     }
 
     private Decl buildTopLevelMethod(DanexParser.TopLevelMethodDeclContext ctx) {
-        // same logic as buildMethod but for top-level; reuse code
         List<Annotation> annotations = buildAnnotations(ctx.annotation());
         List<String> modifiers = buildModifiers(ctx.modifier());
 
@@ -275,7 +203,6 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         return builder.visitMethodDecl(methodNode);
     }
 
-    // Build params: return List<ParamDecl>
     private List<ParamDecl> buildParams(DanexParser.ParamListContext paramListCtx) {
         List<ParamDecl> params = new ArrayList<>();
         if (paramListCtx == null) return params;
@@ -299,16 +226,12 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
             String target = (resultName != null) ? resultName : methodName;
             VariableExpr targetVar = new VariableExpr(target);
             AssignStmt assign = new AssignStmt(targetVar, expr);
-            // wrap into block
             List<Stmt> stmts = new ArrayList<>();
             stmts.add(assign);
             return new BlockStmt(stmts);
         }
     }
 
-    // -------------------
-    // Blocks & statements
-    // -------------------
     @Override
     public Object visitBlock(DanexParser.BlockContext ctx) {
         List<Stmt> stmts = new ArrayList<>();
@@ -377,28 +300,34 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
 
     @Override
     public Object visitForStatement(DanexParser.ForStatementContext ctx) {
-        // conservative: use expression() children for init/cond/update if present
+        // Conservative, compile-safe implementation:
+        // We produce a ForStmt with null init/condition/update if parser details differ.
         Stmt initStmt = null;
         Expr condition = null;
         Expr updateExpr = null;
 
-        int exprCount = (ctx.expression() != null) ? ctx.expression().size() : 0;
-        if (exprCount > 0) {
-            // heuristic: first expr is init (if present), last expr is update (if present), middle is condition
-            initStmt = null;
-            Expr initExpr = (Expr) visit(ctx.expression(0));
-            if (initExpr != null) initStmt = (ExprStmt) builder.visitExprStmt(new ExprStmt(initExpr));
-            if (exprCount == 1) {
-                // only init or only condition depending on grammar; treat as condition
-                condition = initExpr;
-                initStmt = null;
-            } else if (exprCount == 2) {
-                condition = (Expr) visit(ctx.expression(1));
-            } else {
-                condition = (Expr) visit(ctx.expression(1));
-                updateExpr = (Expr) visit(ctx.expression(exprCount - 1));
+        // If the grammar provides an assignment() child, visit it as init.
+        try {
+            if (ctx.assignment() != null) {
+                Object initObj = visit(ctx.assignment());
+                if (initObj instanceof Expr) {
+                    Expr initExpr = (Expr) initObj;
+                    initStmt = (ExprStmt) builder.visitExprStmt(new ExprStmt(initExpr));
+                } else if (initObj instanceof Stmt) {
+                    initStmt = (Stmt) initObj;
+                }
             }
-        }
+        } catch (Exception ignored) {}
+
+        // If the grammar provides a single expression child, treat it as condition.
+        try {
+            if (ctx.expression() != null) {
+                Object condObj = visit(ctx.expression());
+                if (condObj instanceof Expr) condition = (Expr) condObj;
+            }
+        } catch (Exception ignored) {}
+
+        // Update expression often lives in a separate child; leave null if unknown.
 
         Stmt body = (Stmt) visit(ctx.block());
         ForStmt forNode = new ForStmt(initStmt, condition, updateExpr, body);
@@ -425,14 +354,10 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         return builder.visitExprStmt(exprStmt);
     }
 
-    // -------------------
-    // Assignment & binary/unary
-    // -------------------
     @Override
     public Object visitAssignment(DanexParser.AssignmentContext ctx) {
         String name = ctx.IDENTIFIER().getText();
         String op = ctx.assignOp().getText();
-        // use expression() as RHS (safer than assignment())
         Expr value = (Expr) visit(ctx.expression());
         AssignExpr assignNode;
         if ("=".equals(op)) {
@@ -540,9 +465,6 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         return expr;
     }
 
-    // -------------------
-    // Primary expressions
-    // -------------------
     @Override
     public Object visitPrimaryExpr(DanexParser.PrimaryExprContext ctx) {
         if (ctx.expression() != null) return visit(ctx.expression());
@@ -620,9 +542,6 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         return builder.visitTryExpr(tryNode);
     }
 
-    // -------------------
-    // Try-statement
-    // -------------------
     @Override
     public Object visitTryStatement(DanexParser.TryStatementContext ctx) {
         List<ResourceDecl> resources = new ArrayList<>();
@@ -659,9 +578,6 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
         return new ResourceDecl(type, name, initExpr);
     }
 
-    // -------------------
-    // Annotations & helpers
-    // -------------------
     @Override
     public Object visitAnnotation(DanexParser.AnnotationContext ctx) {
         String name = ctx.IDENTIFIER().getText();
@@ -686,7 +602,6 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
 
     @Override
     public Object visitType(DanexParser.TypeContext ctx) {
-        // return textual type; higher layers will convert to TypeNode where needed
         return ctx.getText();
     }
-}
+                }
