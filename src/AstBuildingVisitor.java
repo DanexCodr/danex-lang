@@ -299,7 +299,6 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
     }
 
     @Override
-    @Override
 public Object visitForStatement(DanexParser.ForStatementContext ctx) {
     // Conservative, compile-safe implementation:
     // We produce a ForStmt with null init/condition/update if parser details differ.
