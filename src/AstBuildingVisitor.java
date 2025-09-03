@@ -39,7 +39,7 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
             @Override public Boolean visitAwaitExpr(AwaitExpr ae) { return false; }
             @Override public Boolean visitNullCoalesceExpr(NullCoalesceExpr ne) { return scanExpr(ne.left) || scanExpr(ne.right); }
             @Override public Boolean visitComparatorExpr(ComparatorExpr ce) { return scanExpr(ce.left) || scanExpr(ce.right); }
-
+            @Override public Boolean visitVarDeclStmt(VarDeclStmt stmt) { if (scanStmt(s)) return true; return false; }
             @Override public Boolean visitExprStmt(ExprStmt es) { return scanExpr(es.expression); }
             @Override public Boolean visitAssignStmt(AssignStmt stmt) {
                 Expr tgt = stmt.target;
