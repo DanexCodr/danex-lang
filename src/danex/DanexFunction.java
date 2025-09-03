@@ -26,7 +26,9 @@ public class DanexFunction implements DanexCallable {
 
         // Determine return:
         // If a resultName was declared, use that; otherwise use method name.
-        String resultKey = (declaration.resultName != null) ? declaration.resultName : declaration.name;
+        String resultKey = (declaration.returnSpec != null && declaration.returnSpec.name != null)
+    ? declaration.returnSpec.name
+    : declaration.name;
         if (localEnv.contains(resultKey)) {
             return localEnv.get(resultKey);
         }
