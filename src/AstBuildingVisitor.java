@@ -316,8 +316,8 @@ public Object visitForStatement(DanexParser.ForStatementContext ctx) {
 
     // The expression (index 0) is the condition
     Expr condition = null;
-    if (ctx.expression(0) != null) {
-        Object condObj = visit(ctx.expression(0));
+    if (ctx.expression() != null) {
+        Object condObj = visit(ctx.expression());
         if (condObj instanceof Expr) {
             condition = (Expr) condObj;
         }
