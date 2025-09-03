@@ -1,6 +1,7 @@
 package danex.ast;
 
 import java.util.*;
+
 public class ParamDecl extends Decl {
     public final TypeNode type;
     public final String name;

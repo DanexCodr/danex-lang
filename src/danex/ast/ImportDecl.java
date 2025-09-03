@@ -1,6 +1,7 @@
 package danex.ast;
 
 import java.util.*;
+
 public class ImportDecl extends Decl {
     public final String moduleName;
     public final String alias;

@@ -1,6 +1,7 @@
 package danex.ast;
 
 import java.util.*;
+
 public class TryStmt extends Stmt {
     public final List<ResourceDecl> resources;
     public final List<Stmt> tryBlock;

@@ -1,6 +1,7 @@
 package danex.ast;
 
 import java.util.*;
+
 public class MethodDecl extends Decl {
     public final String name;
     public final ReturnSpec returnSpec;

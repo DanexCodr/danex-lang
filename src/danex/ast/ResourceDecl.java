@@ -1,6 +1,7 @@
 package danex.ast;
 
 import java.util.*;
+
 public class ResourceDecl extends Decl {
     public final String type;
     public final String name;

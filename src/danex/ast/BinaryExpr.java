@@ -1,6 +1,7 @@
 package danex.ast;
 
 import java.util.*;
+
 public class BinaryExpr extends Expr {
     public final Expr left;
     public final String operator;

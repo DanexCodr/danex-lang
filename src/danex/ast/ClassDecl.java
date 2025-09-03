@@ -1,6 +1,7 @@
 package danex.ast;
 
 import java.util.*;
+
 public class ClassDecl extends Decl {
     public final String name;
     public final List<Annotation> annotations;

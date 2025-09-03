@@ -1,6 +1,7 @@
 package danex.ast;
 
 import java.util.*;
+
 public class ThrowStmt extends Stmt {
     public final Expr exception;
 
