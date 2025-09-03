@@ -78,8 +78,8 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
 
     // --- Visitor methods for declarations/params/annotations ---
     @Override
-    public Stmt visitVarDeclStmt(VarDeclStmt varDeclStmt) {
-    return varDeclStmt;
+    public Void visitVarDeclStmt(VarDeclStmt varDeclStmt) {
+    return null;
     }
     
     @Override
