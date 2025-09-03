@@ -11,7 +11,6 @@ compilationUnit
 
 statement
     : classDecl
-    | methodDecl
     | topLevelMethodDecl
     | importStmt
     ;
