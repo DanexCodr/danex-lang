@@ -300,50 +300,42 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
 
     @Override
 public Object visitForStatement(DanexParser.ForStatementContext ctx) {
-    // Conservative, compile-safe implementation:
-    // We produce a ForStmt with null init/condition/update if parser details differ.
+    // Grammar: FOR LPAREN assignment SEMI expression SEMI assignment RPAREN block
+    
+    // First assignment (index 0) is the initialization
     Stmt initStmt = null;
+    if (ctx.assignment(0) != null) {
+        Object initObj = visit(ctx.assignment(0));
+        if (initObj instanceof Expr) {
+            Expr initExpr = (Expr) initObj;
+            initStmt = (ExprStmt) builder.visitExprStmt(new ExprStmt(initExpr));
+        } else if (initObj instanceof Stmt) {
+            initStmt = (Stmt) initObj;
+        }
+    }
+
+    // The expression (index 0) is the condition
     Expr condition = null;
+    if (ctx.expression(0) != null) {
+        Object condObj = visit(ctx.expression(0));
+        if (condObj instanceof Expr) {
+            condition = (Expr) condObj;
+        }
+    }
+
+    // Second assignment (index 1) is the update
     Expr updateExpr = null;
-
-    // If the grammar provides assignment() children, visit the first one as init.
-    try {
-        List<DanexParser.AssignmentContext> assignments = ctx.assignment();
-        if (assignments != null && !assignments.isEmpty()) {
-            Object initObj = visit(assignments.get(0)); // Visit first assignment
-            if (initObj instanceof Expr) {
-                Expr initExpr = (Expr) initObj;
-                initStmt = (ExprStmt) builder.visitExprStmt(new ExprStmt(initExpr));
-            } else if (initObj instanceof Stmt) {
-                initStmt = (Stmt) initObj;
-            }
+    if (ctx.assignment(1) != null) {
+        Object updateObj = visit(ctx.assignment(1));
+        if (updateObj instanceof Expr) {
+            updateExpr = (Expr) updateObj;
         }
-    } catch (Exception ignored) {}
-
-    // If the grammar provides expression() children, treat the first as condition.
-    try {
-        List<DanexParser.ExpressionContext> expressions = ctx.expression();
-        if (expressions != null && !expressions.isEmpty()) {
-            Object condObj = visit(expressions.get(0));
-            if (condObj instanceof Expr) condition = (Expr) condObj;
-        }
-    } catch (Exception ignored) {}
-
-    // Update expression often lives in a separate child; leave null if unknown.
-    // If there are multiple expressions, the second might be the update
-    try {
-        List<DanexParser.ExpressionContext> expressions = ctx.expression();
-        if (expressions != null && expressions.size() > 1) {
-            Object updateObj = visit(expressions.get(1));
-            if (updateObj instanceof Expr) updateExpr = (Expr) updateObj;
-        }
-    } catch (Exception ignored) {}
+    }
 
     Stmt body = (Stmt) visit(ctx.block());
     ForStmt forNode = new ForStmt(initStmt, condition, updateExpr, body);
     return builder.visitForStmt(forNode);
 }
-    
 
     @Override
     public Object visitThrowStatement(DanexParser.ThrowStatementContext ctx) {
