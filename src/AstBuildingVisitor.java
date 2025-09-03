@@ -286,20 +286,8 @@ public Object visitVarDecl(DanexParser.VarDeclContext ctx) {
         initializer = (Expr) visit(ctx.expression());
     }
     
-    // For variable declarations, we need to create a special statement
-    // Since you don't have a VarDeclStmt class, we'll handle it as an assignment
-    // This is a temporary solution - you should create a proper VarDeclStmt class
-    
-    VariableExpr varExpr = new VariableExpr(varName);
-    if (initializer != null) {
-        AssignStmt assignStmt = new AssignStmt(varExpr, initializer);
-        return builder.visitAssignStmt(assignStmt);
-    } else {
-        // Uninitialized variable - assign null
-        LiteralExpr nullLit = new LiteralExpr(null);
-        AssignStmt assignStmt = new AssignStmt(varExpr, nullLit);
-        return builder.visitAssignStmt(assignStmt);
-    }
+    VarDeclStmt varDeclStmt = new VarDeclStmt(typeNode, varName, initializer);
+    return builder.visitVarDeclStmt(varDeclStmt);
 }
 
     @Override
