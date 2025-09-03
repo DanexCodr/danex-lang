@@ -245,33 +245,65 @@ public class AstBuildingVisitor extends DanexParserBaseVisitor<Object> {
     }
 
     @Override
-    public Object visitBlockContent(DanexParser.BlockContentContext ctx) {
-        if (ctx.statement() != null) {
-            Object stmtObj = visit(ctx.statement());
-            if (stmtObj instanceof Stmt) return stmtObj;
-            if (stmtObj instanceof Decl) throw new RuntimeException("Declaration not allowed here: " + stmtObj);
-            throw new RuntimeException("Expected Stmt in blockContent, got: " + stmtObj);
-        } else if (ctx.expressionStatement() != null) {
-            return visit(ctx.expressionStatement());
-        } else if (ctx.ifStatement() != null) {
-            return visit(ctx.ifStatement());
-        } else if (ctx.whileStatement() != null) {
-            return visit(ctx.whileStatement());
-        } else if (ctx.doWhileStatement() != null) {
-            return visit(ctx.doWhileStatement());
-        } else if (ctx.forStatement() != null) {
-            return visit(ctx.forStatement());
-        } else if (ctx.tryStatement() != null) {
-            return visit(ctx.tryStatement());
-        } else if (ctx.exitStatement() != null) {
-            return visit(ctx.exitStatement());
-        } else if (ctx.throwStatement() != null) {
-            return visit(ctx.throwStatement());
-        } else if (ctx.returnStatement() != null) {
-            return visit(ctx.returnStatement());
-        }
-        throw new RuntimeException("Unknown blockContent: " + ctx.getText());
+public Object visitBlockContent(DanexParser.BlockContentContext ctx) {
+    if (ctx.statement() != null) {
+        Object stmtObj = visit(ctx.statement());
+        if (stmtObj instanceof Stmt) return stmtObj;
+        if (stmtObj instanceof Decl) throw new RuntimeException("Declaration not allowed here: " + stmtObj);
+        throw new RuntimeException("Expected Stmt in blockContent, got: " + stmtObj);
+    } else if (ctx.varDecl() != null) {
+        return visit(ctx.varDecl());
+    } else if (ctx.expressionStatement() != null) {
+        return visit(ctx.expressionStatement());
+    } else if (ctx.ifStatement() != null) {
+        return visit(ctx.ifStatement());
+    } else if (ctx.whileStatement() != null) {
+        return visit(ctx.whileStatement());
+    } else if (ctx.doWhileStatement() != null) {
+        return visit(ctx.doWhileStatement());
+    } else if (ctx.forStatement() != null) {
+        return visit(ctx.forStatement());
+    } else if (ctx.tryStatement() != null) {
+        return visit(ctx.tryStatement());
+    } else if (ctx.exitStatement() != null) {
+        return visit(ctx.exitStatement());
+    } else if (ctx.throwStatement() != null) {
+        return visit(ctx.throwStatement());
+    } else if (ctx.returnStatement() != null) {
+        return visit(ctx.returnStatement());
     }
+    throw new RuntimeException("Unknown blockContent: " + ctx.getText());
+}
+
+    @Override
+public Object visitVarDecl(DanexParser.VarDeclContext ctx) {
+    String typeName = ctx.type().getText();
+    TypeNode typeNode = new TypeNode(typeName);
+    String varName = ctx.IDENTIFIER().getText();
+    
+    Expr initializer = null;
+    if (ctx.expression() != null) {
+        initializer = (Expr) visit(ctx.expression());
+    }
+    
+    // Create a variable declaration statement
+    // You might need to create a VarDeclStmt class or similar
+    // For now, let's assume you want to handle this as a declaration
+    // or create an assignment statement
+    
+    // This is a placeholder - you'll need to implement proper handling
+    VariableExpr varExpr = new VariableExpr(varName);
+    if (initializer != null) {
+        AssignStmt assignStmt = new AssignStmt(varExpr, initializer);
+        return builder.visitAssignStmt(assignStmt);
+    } else {
+        // Handle uninitialized variable declaration
+        // You might want to create a specific statement type for this
+        LiteralExpr nullLit = new LiteralExpr(null);
+        AssignStmt assignStmt = new AssignStmt(varExpr, nullLit);
+        return builder.visitAssignStmt(assignStmt);
+    }
+}
 
     @Override
     public Object visitIfStatement(DanexParser.IfStatementContext ctx) {
