@@ -199,8 +199,8 @@ public class DanexParser extends Parser {
 		public ClassDeclContext classDecl() {
 			return getRuleContext(ClassDeclContext.class,0);
 		}
-		public TopLevelMethodDeclContext topLevelMethodDecl() {
-			return getRuleContext(TopLevelMethodDeclContext.class,0);
+		public MethodDeclContext methodDecl() {
+			return getRuleContext(MethodDeclContext.class,0);
 		}
 		public ImportStmtContext importStmt() {
 			return getRuleContext(ImportStmtContext.class,0);
@@ -242,7 +242,7 @@ public class DanexParser extends Parser {
 				enterOuterAlt(_localctx, 2);
 				{
 				setState(99);
-				topLevelMethodDecl();
+				methodDecl();
 				}
 				break;
 			case 3:
@@ -3406,7 +3406,7 @@ public class DanexParser extends Parser {
 		"\u0171\3\2\2\2H\u0179\3\2\2\2J\u0181\3\2\2\2L\u0189\3\2\2\2N\u0194\3\2"+
 		"\2\2P\u01a2\3\2\2\2R\u01a4\3\2\2\2T\u01a7\3\2\2\2V\u01b5\3\2\2\2X\u01c3"+
 		"\3\2\2\2Z\u01c5\3\2\2\2\\^\5\4\3\2]\\\3\2\2\2^a\3\2\2\2_]\3\2\2\2_`\3"+
-		"\2\2\2`b\3\2\2\2a_\3\2\2\2bc\7\2\2\3c\3\3\2\2\2dh\5\b\5\2eh\5\20\t\2f"+
+		"\2\2\2`b\3\2\2\2a_\3\2\2\2bc\7\2\2\3c\3\3\2\2\2dh\5\b\5\2eh\5\16\b\2f"+
 		"h\5\6\4\2gd\3\2\2\2ge\3\2\2\2gf\3\2\2\2h\5\3\2\2\2ij\7\'\2\2jm\7.\2\2"+
 		"kl\7(\2\2ln\7.\2\2mk\3\2\2\2mn\3\2\2\2no\3\2\2\2op\7@\2\2p\7\3\2\2\2q"+
 		"s\5\24\13\2rq\3\2\2\2sv\3\2\2\2tr\3\2\2\2tu\3\2\2\2uz\3\2\2\2vt\3\2\2"+
