@@ -42,25 +42,27 @@ public class AstGenerator {
         );
         for (NodeDef nd : exprNodes) generateExprSubclass(nd);
 
-        List<NodeDef> stmtNodes = Arrays.asList(
-            new NodeDef("ExprStmt", Arrays.asList("Expr expression")),
-            new NodeDef("BlockStmt", Arrays.asList("List<Stmt> statements")),
-            new NodeDef("IfStmt", Arrays.asList("Expr condition", "Stmt thenBranch", "Stmt elseBranch")),
-            new NodeDef("WhileStmt", Arrays.asList("Expr condition", "Stmt body")),
-            new NodeDef("DoWhileStmt", Arrays.asList("Stmt body", "Expr condition")),
-            new NodeDef("ForStmt", Arrays.asList("Stmt init", "Expr condition", "Expr update", "Stmt body")),
-            new NodeDef("AssignStmt", Arrays.asList("Expr target", "Expr value")),
-            new NodeDef("ThrowStmt", Arrays.asList("Expr exception")),
-            new NodeDef("ExitStmt", Collections.emptyList()),
-            new NodeDef("TryStmt", Arrays.asList(
-                "List<ResourceDecl> resources",
-                "List<Stmt> tryBlock",
-                "String catchType",
-                "String catchName",
-                "List<Stmt> catchBlock",
-                "List<Stmt> finallyBlock"
-            ))
-        );
+        // In the main method where stmtNodes are defined, add:
+List<NodeDef> stmtNodes = Arrays.asList(
+    new NodeDef("ExprStmt", Arrays.asList("Expr expression")),
+    new NodeDef("BlockStmt", Arrays.asList("List<Stmt> statements")),
+    new NodeDef("IfStmt", Arrays.asList("Expr condition", "Stmt thenBranch", "Stmt elseBranch")),
+    new NodeDef("WhileStmt", Arrays.asList("Expr condition", "Stmt body")),
+    new NodeDef("DoWhileStmt", Arrays.asList("Stmt body", "Expr condition")),
+    new NodeDef("ForStmt", Arrays.asList("Stmt init", "Expr condition", "Expr update", "Stmt body")),
+    new NodeDef("AssignStmt", Arrays.asList("Expr target", "Expr value")),
+    new NodeDef("VarDeclStmt", Arrays.asList("TypeNode type", "String name", "Expr initializer")),
+    new NodeDef("ThrowStmt", Arrays.asList("Expr exception")),
+    new NodeDef("ExitStmt", Collections.emptyList()),
+    new NodeDef("TryStmt", Arrays.asList(
+        "List<ResourceDecl> resources",
+        "List<Stmt> tryBlock",
+        "String catchType",
+        "String catchName",
+        "List<Stmt> catchBlock",
+        "List<Stmt> finallyBlock"
+    ))
+);
         for (NodeDef nd : stmtNodes) generateStmtSubclass(nd);
 
         List<NodeDef> declNodes = Arrays.asList(
