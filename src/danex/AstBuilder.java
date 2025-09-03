@@ -7,7 +7,6 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
 
     @Override
     public Decl visitImportDecl(ImportDecl importDecl) {
-        // fields are already AST nodes; copy them
         String moduleName = importDecl.moduleName;
         String alias = importDecl.alias;
         return new ImportDecl(moduleName, alias);
@@ -15,7 +14,6 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
 
     @Override
     public Expr visitAwaitExpr(AwaitExpr awaitExpr) {
-        // Already an AST node; return a copy
         Expr expression = awaitExpr.expression;
         return new AwaitExpr(expression);
     }
@@ -199,10 +197,7 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
         return new Annotation(annotation.name);
     }
 
-    @Override
-    public Param visitParam(Param param) {
-        return new Param(param.type, param.name, param.varargs);
-    }
+    // Removed old visitParam(Param) — use ParamDecl instead.
 
     @Override
     public Decl visitParamDecl(ParamDecl pd) {
@@ -221,4 +216,5 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
         Expr e = stmt.expression;
         return new ExprStmt(e);
     }
+
 }
