@@ -78,17 +78,11 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void>, De
 
     // --- Visitor methods for declarations/params/annotations ---
     @Override
-    public Void visitParam(Param param) {
-        // Param nodes don't execute at runtime by themselves; stub.
-        return null;
-    }
-
-    @Override
-    public Void visitParamDecl(ParamDecl paramDecl) {
-        // Parameter declarations inside signatures are no-op at interpretation time.
-        return null;
-    }
-
+public Void visitParamDecl(danex.ast.ParamDecl paramDecl) {
+    // ParamDecl nodes are metadata only for interpreter/runtime signature handling.
+    // No runtime action required here.
+    return null;
+}
     @Override
     public Void visitAnnotation(Annotation annotation) {
         // No-op or implement annotation behavior here
