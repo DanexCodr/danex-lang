@@ -19,6 +19,11 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
     }
 
     @Override
+    public Stmt visitVarDeclStmt(VarDeclStmt varDeclStmt) {
+    return varDeclStmt;
+    }
+
+    @Override
     public Decl visitMethodDecl(MethodDecl methodDecl) {
         String name = methodDecl.name;
         ReturnSpec returnSpec = methodDecl.returnSpec;
