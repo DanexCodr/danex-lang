@@ -129,23 +129,23 @@ List<NodeDef> stmtNodes = Arrays.asList(
     }
 
     private static void generateStmtBase() throws IOException {
-        String pkg = "danex.ast";
-        Path file = Paths.get(OUTPUT_DIR, "Stmt.java");
-        String[] concreteStmts = {
-            "ExprStmt", "BlockStmt", "IfStmt", "WhileStmt", "DoWhileStmt", "ForStmt",
-            "AssignStmt", "ThrowStmt", "ExitStmt", "TryStmt"
-        };
-        try (BufferedWriter w = Files.newBufferedWriter(file)) {
-            w.write("package " + pkg + ";\n\n");
-            w.write("public abstract class Stmt extends ASTNode {\n");
-            w.write("    public interface Visitor<R> {\n");
-            for (String name : concreteStmts) {
-                w.write("        R visit" + name + "(" + name + " " + decap(name) + ");\n");
-            }
-            w.write("    }\n\n");
-            w.write("    public abstract <R> R accept(Visitor<R> visitor);\n");
-            w.write("}\n");
+    String pkg = "danex.ast";
+    Path file = Paths.get(OUTPUT_DIR, "Stmt.java");
+    String[] concreteStmts = {
+        "ExprStmt", "BlockStmt", "IfStmt", "WhileStmt", "DoWhileStmt", "ForStmt",
+        "AssignStmt", "VarDeclStmt", "ThrowStmt", "ExitStmt", "TryStmt" // ADD VarDeclStmt HERE
+    };
+    try (BufferedWriter w = Files.newBufferedWriter(file)) {
+        w.write("package " + pkg + ";\n\n");
+        w.write("public abstract class Stmt extends ASTNode {\n");
+        w.write("    public interface Visitor<R> {\n");
+        for (String name : concreteStmts) {
+            w.write("        R visit" + name + "(" + name + " " + decap(name) + ");\n");
         }
+        w.write("    }\n\n");
+        w.write("    public abstract <R> R accept(Visitor<R> visitor);\n");
+        w.write("}\n");
+    }
     }
 
     private static void generateDeclBase() throws IOException {
