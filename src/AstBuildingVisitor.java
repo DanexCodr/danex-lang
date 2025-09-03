@@ -275,7 +275,7 @@ public Object visitBlockContent(DanexParser.BlockContentContext ctx) {
     throw new RuntimeException("Unknown blockContent: " + ctx.getText());
 }
 
-    @Override
+@Override
 public Object visitVarDecl(DanexParser.VarDeclContext ctx) {
     String typeName = ctx.type().getText();
     TypeNode typeNode = new TypeNode(typeName);
@@ -286,19 +286,16 @@ public Object visitVarDecl(DanexParser.VarDeclContext ctx) {
         initializer = (Expr) visit(ctx.expression());
     }
     
-    // Create a variable declaration statement
-    // You might need to create a VarDeclStmt class or similar
-    // For now, let's assume you want to handle this as a declaration
-    // or create an assignment statement
+    // For variable declarations, we need to create a special statement
+    // Since you don't have a VarDeclStmt class, we'll handle it as an assignment
+    // This is a temporary solution - you should create a proper VarDeclStmt class
     
-    // This is a placeholder - you'll need to implement proper handling
     VariableExpr varExpr = new VariableExpr(varName);
     if (initializer != null) {
         AssignStmt assignStmt = new AssignStmt(varExpr, initializer);
         return builder.visitAssignStmt(assignStmt);
     } else {
-        // Handle uninitialized variable declaration
-        // You might want to create a specific statement type for this
+        // Uninitialized variable - assign null
         LiteralExpr nullLit = new LiteralExpr(null);
         AssignStmt assignStmt = new AssignStmt(varExpr, nullLit);
         return builder.visitAssignStmt(assignStmt);
