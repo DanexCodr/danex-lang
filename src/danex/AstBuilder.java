@@ -190,14 +190,18 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
         return new ThrowStmt(exception);
     }
 
-    // === Manual overrides for certain AST node types ===
-
     @Override
-    public Annotation visitAnnotation(Annotation annotation) {
-        return new Annotation(annotation.name);
+    public Stmt visitExprStmt(ExprStmt stmt) {
+        Expr e = stmt.expression;
+        return new ExprStmt(e);
     }
 
-    // Removed old visitParam(Param) — use ParamDecl instead.
+    // === Decl visitor methods (properly annotated with @Override) ===
+
+    @Override
+    public Decl visitAnnotation(Annotation annotation) {
+        return new Annotation(annotation.name);
+    }
 
     @Override
     public Decl visitParamDecl(ParamDecl pd) {
@@ -206,15 +210,8 @@ public class AstBuilder implements Expr.Visitor<Expr>, Stmt.Visitor<Stmt>, Decl.
     }
 
     @Override
-    public ResourceDecl visitResourceDecl(ResourceDecl rd) {
+    public Decl visitResourceDecl(ResourceDecl rd) {
         Expr init = rd.initializer;
         return new ResourceDecl(rd.type, rd.name, init);
     }
-
-    @Override
-    public ExprStmt visitExprStmt(ExprStmt stmt) {
-        Expr e = stmt.expression;
-        return new ExprStmt(e);
-    }
-
 }
