@@ -1,4 +1,6 @@
-# DanexLang // Deprecated, see the predecessor "Coderive" in my [Coderive](https://github.com/DanexCodr/Coderive) repo.
+# DanexLang (Deprecated)
+
+See the predecessor "Coderive" in my [Coderive](https://github.com/DanexCodr/Coderive) repo.
 
 **DanexLang** is a clean, modern programming language designed by **Danison Nuñez**.  
 It features expression-oriented syntax, implicit return semantics, and minimal boilerplate — ideal for logic-heavy applications, education, and experimentation.
