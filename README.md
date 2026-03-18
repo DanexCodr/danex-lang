@@ -1,4 +1,4 @@
-# DanexLang (Deprecated)
+# DanexLang (Discontinued)
 
 See the predecessor "Coderive" language in my [Coderive](https://github.com/DanexCodr/Coderive) repo.
 
